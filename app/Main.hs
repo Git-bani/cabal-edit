@@ -1,0 +1,199 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module Main (main) where
+
+import Options.Applicative hiding (Success, Failure)
+import Business.Add
+import Business.Remove
+import Business.Upgrade
+import Core.Types
+import Core.ProjectContext
+import Utils.Logging
+import Data.Text (Text)
+import qualified Data.Text as T
+import System.Directory (getCurrentDirectory, listDirectory)
+import System.Exit (exitSuccess, exitWith, ExitCode(..))
+import Data.List (isSuffixOf, isPrefixOf)
+import Control.Monad (when, forM_)
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
+import Text.Printf (printf)
+
+main :: IO ()
+main = do
+  cli <- execParser cliInfo
+  startTime <- getCurrentTime
+  result <- executeCommand cli
+  endTime <- getCurrentTime
+  
+  let diff = diffUTCTime endTime startTime
+  let timeStr = printf "%.2fs" (realToFrac diff :: Double)
+  
+  case result of
+    Success _ -> do
+        logSuccess $ T.pack $ "Success! (took " ++ timeStr ++ ")"
+        exitSuccess
+    Failure err -> do
+      logError (errorMessage err)
+      exitWith (ExitFailure 1)
+
+-- Command parser
+cliInfo :: ParserInfo CLI
+cliInfo = info (cliParser <**> helper)
+  ( fullDesc
+  <> progDesc "Manage Cabal dependencies from command line"
+  <> header "cabal-edit - A Cargo-edit equivalent for Haskell" )
+
+cliParser :: Parser CLI
+cliParser = CLI
+  <$> commandParser
+  <*> switch
+      ( long "verbose"
+      <> short 'v'
+      <> help "Enable verbose logging" )
+  <*> switch
+      ( long "quiet"
+      <> short 'q'
+      <> help "Suppress all output" )
+  <*> switch
+      ( long "workspace"
+      <> short 'w'
+      <> help "Apply to all packages in the workspace (cabal.project)" )
+
+commandParser :: Parser Command
+commandParser = subparser
+  ( command "add" (info addParser (progDesc "Add a dependency"))
+  <> command "rm" (info removeParser (progDesc "Remove a dependency"))
+  <> command "upgrade" (info upgradeParser (progDesc "Upgrade dependencies"))
+  )
+
+addParser :: Parser Command
+addParser = AddCmd <$>
+  ( AddOptions
+  <$> (T.pack <$> argument str (metavar "PACKAGE"))
+  <*> optional (strOption
+      ( long "version"
+      <> short 'V'
+      <> metavar "VERSION"
+      <> help "Specify version constraint" ))
+  <*> option sectionTargetReader
+      ( long "section"
+      <> short 's'
+      <> metavar "SECTION"
+      <> value TargetLib
+      <> help "Target section (library/executable/test)" )
+  <*> switch
+      ( long "dev"
+      <> short 'd'
+      <> help "Add as test dependency" )
+  <*> switch
+      ( long "dry-run"
+      <> help "Don't write changes" )
+  )
+
+removeParser :: Parser Command
+removeParser = RemoveCmd <$>
+  ( RemoveOptions
+  <$> (T.pack <$> argument str (metavar "PACKAGE"))
+  <*> option sectionTargetReader
+      ( long "section"
+      <> short 's'
+      <> metavar "SECTION"
+      <> value TargetLib
+      <> help "Target section (library/executable/test)" )
+  <*> switch
+      ( long "dry-run"
+      <> help "Don't write changes" )
+  )
+
+upgradeParser :: Parser Command
+upgradeParser = UpgradeCmd <$>
+  ( UpgradeOptions
+  <$> optional (T.pack <$> argument str (metavar "PACKAGE"))
+  <*> switch
+      ( long "dry-run"
+      <> help "Don't write changes" )
+  )
+
+sectionTargetReader :: ReadM SectionTarget
+sectionTargetReader = eitherReader $ \s -> Right $ parseSectionTarget s
+
+parseSectionTarget :: String -> SectionTarget
+parseSectionTarget s = case s of
+  "library" -> TargetLib
+  "lib" -> TargetLib
+  "executable" -> TargetExe Nothing
+  "exe" -> TargetExe Nothing
+  "test-suite" -> TargetTest Nothing
+  "test" -> TargetTest Nothing
+  "benchmark" -> TargetBench Nothing
+  "bench" -> TargetBench Nothing
+  _ -> if "exe:" `isPrefixOf` s then TargetExe (Just $ T.pack $ drop 4 s)
+       else if "test:" `isPrefixOf` s then TargetTest (Just $ T.pack $ drop 5 s)
+       else if "bench:" `isPrefixOf` s then TargetBench (Just $ T.pack $ drop 6 s)
+       else TargetNamed (T.pack s)
+
+-- Execute parsed command
+executeCommand :: CLI -> IO (Result ())
+executeCommand (CLI cmd verbose quiet workspace) = do
+  if quiet 
+    then setLogLevel Quiet
+    else when verbose $ setLogLevel Debug
+    
+  when verbose $ logDebug "Verbose mode enabled"
+  
+  targetFiles <- if workspace
+    then do
+      logInfo "Scanning workspace for projects..."
+      root <- findProjectRoot
+      case root of
+        Nothing -> do
+          logError "No cabal.project found!"
+          return []
+        Just r -> do
+          logDebug $ "Found project root: " <> T.pack r
+          ctx <- loadProjectContext r
+          findAllPackageFiles ctx
+    else do
+      f <- findCabalFile
+      return $ maybe [] pure f
+
+  if null targetFiles
+    then return $ Failure $ Error "No .cabal files found" FileNotFound
+    else do
+      let count = length targetFiles
+      if count > 1 
+        then logInfo $ "Processing " <> T.pack (show count) <> " package(s)..."
+        else return ()
+      
+      forM_ targetFiles $ \path -> do
+        res <- runOn path cmd
+        case res of
+          Failure e -> logError $ "Failed on " <> T.pack path <> ": " <> errorMessage e
+          Success _ -> return ()
+      
+      return $ Success ()
+
+runOn :: FilePath -> Command -> IO (Result ())
+runOn path cmd = do
+  let actionDesc = describeAction cmd
+  logInfo $ actionDesc <> " (" <> T.pack path <> ")..."
+  
+  case cmd of
+    AddCmd opts -> addDependency opts path
+    RemoveCmd opts -> removeDependency opts path
+    UpgradeCmd opts -> upgradeDependencies opts path
+
+describeAction :: Command -> Text
+describeAction (AddCmd opts) = "Adding " <> aoPackageName opts
+describeAction (RemoveCmd opts) = "Removing " <> roPackageName opts
+describeAction (UpgradeCmd _) = "Upgrading dependencies"
+
+-- Find .cabal file in current directory
+findCabalFile :: IO (Maybe FilePath)
+findCabalFile = do
+  cwd <- getCurrentDirectory
+  files <- listDirectory cwd
+  let cabalFiles = filter (".cabal" `isSuffixOf`) files
+  return $ case cabalFiles of
+             (f:_) -> Just f
+             [] -> Nothing

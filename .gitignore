@@ -1,0 +1,24 @@
+# Haskell build artifacts
+dist
+dist-newstyle
+.stack-work
+
+# GHC
+*.hi
+*.o
+*.dyn_o
+*.dyn_hi
+
+# Profiling & coverage
+*.prof
+*.hp
+*.eventlog
+.hpc
+
+# Editor / OS junk
+*.swp
+*.swo
+*.DS_Store
+.idea/
+.vscode/
+

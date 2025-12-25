@@ -1,0 +1,129 @@
+cabal-version:      3.0
+name:               cabal-edit
+version:            0.1.0.0
+synopsis:           Manage Cabal dependencies from command line
+description:
+    A command-line utility for managing Cabal dependencies,
+    inspired by cargo-edit. Allows you to add, remove, and upgrade
+    dependencies while preserving formatting and comments.
+license:            MIT
+license-file:       LICENSE
+author:             Anitha Barns
+maintainer:         anithabarns@gmail.com
+category:           Development
+build-type:         Simple
+extra-source-files:
+    cabal_edit_blueprint.md
+
+common warnings
+    ghc-options: -Wall
+                 -Wcompat
+                 -Widentities
+                 -Wincomplete-record-updates
+                 -Wincomplete-uni-patterns
+                 -Wmissing-home-modules
+                 -Wpartial-fields
+                 -Wredundant-constraints
+                 -Wmissing-export-lists
+
+library cabal-edit-internal
+    import:           warnings
+    exposed-modules:  Core.Types
+                    , Core.Parser
+                    , Core.Serializer
+                    , Core.DependencyResolver
+                    , Core.ProjectContext
+                    , Core.Safety
+                    , Business.Add
+                    , Business.Remove
+                    , Business.Upgrade
+                    , Business.Validation
+                    , External.Hackage
+                    , External.Network
+                    , Utils.Formatting
+                    , Utils.Error
+                    , Utils.Config
+                    , Utils.Logging
+    build-depends:    base >=4.14 && <5
+                    , Cabal >=3.6 && <3.12
+                    , aeson >=2.0 && <2.3
+                    , text >=1.2 && <2.2
+                    , bytestring >=0.11 && <0.13
+                    , http-conduit >=2.3 && <2.4
+                    , filepath >=1.4 && <1.6
+                    , directory >=1.3 && <1.4
+                    , time >=1.9 && <1.13
+                    , containers >=0.6
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+library
+    import:           warnings
+    exposed-modules:  Distribution.CabalEdit
+    build-depends:    base >=4.14 && <5
+                    , cabal-edit-internal
+    hs-source-dirs:   src-public
+    default-language: Haskell2010
+
+executable cabal-edit
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:    base
+                    , cabal-edit-internal
+                    , optparse-applicative >=0.16 && <0.19
+                    , text
+                    , directory
+                    , time
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+test-suite cabal-edit-test
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    other-modules:    Core.SerializerSpec
+                    , Core.ParserSpec
+                    , Core.SerializerComplexSpec
+                    , Core.SafetySpec
+                    , Core.SerializerOutlierSpec
+                    , Core.DependencyResolverSpec
+                    , Core.UnicodeSpec
+                    , Core.CRLFSpec
+                    , Core.TrailingCommaSpec
+                    , Business.AddSpec
+                    , Business.RemoveSpec
+                    , Business.ValidationSpec
+                    , Business.SubLibrarySpec
+                    , Core.ProjectContextSpec
+                    , Integration.EndToEndSpec
+                    , Utils.ConfigSpec
+                    , Golden.RoundtripSpec
+    build-tool-depends: hspec-discover:hspec-discover
+    build-depends:    base
+                    , cabal-edit-internal
+                    , hspec >=2.8 && <2.12
+                    , hedgehog >=1.0 && <1.8
+                    , hspec-hedgehog >=0.0.1
+                    , text
+                    , directory
+                    , filepath
+                    , process
+                    , aeson
+                    , bytestring
+    hs-source-dirs:   test
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+benchmark cabal-edit-bench
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          Benchmark.hs
+    build-depends:    base
+                    , cabal-edit-internal
+                    , criterion
+                    , text
+                    , directory
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:      -O2 -threaded -rtsopts -with-rtsopts=-N

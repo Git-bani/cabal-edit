@@ -1,0 +1,50 @@
+cabal-version:      2.4
+-- Initial comment
+name:               complex-project
+version:            0.1.0.0
+synopsis:           A complex cabal file for golden testing
+description:
+    This file contains:
+    * Comments
+    * Weird indentation
+    * Conditional blocks
+license:            MIT
+author:             Test User
+maintainer:         test@example.com
+
+-- A comment between fields
+category:           Testing
+
+flag development
+    manual: True
+    default: False
+
+library
+    exposed-modules:  MyLib
+    -- Comment inside block
+    build-depends:    base ^>=4.14.0.0
+                    , text
+                    -- Interleaved comment
+                    , aeson >= 2.0
+    
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+    if os(windows)
+        build-depends: Win32
+
+executable my-exe
+    main-is:          Main.hs
+    
+    -- Comment before build-depends
+    build-depends:    base
+                    , complex-project
+    
+    if flag(development)
+        ghc-options: -Werror
+
+test-suite my-test
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    build-depends:    base, hspec
+    hs-source-dirs:   test

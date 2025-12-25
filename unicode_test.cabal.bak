@@ -1,0 +1,10 @@
+cabal-version: 3.0
+name: unicode-test
+version: 0.1.0.0
+description: This package has unicode: λ value -> α + β
+maintainer: Anitha Barns <anithabarns@gmail.com> -- © 2025
+
+library
+  build-depends: base
+  -- Comment with unicode: 你好
+  default-language: Haskell2010
