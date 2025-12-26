@@ -33,21 +33,40 @@ cabal-edit add text --version "^>= 1.2"
 
 **Adding to a specific section:**
 
-You can target specific sections like executables or test suites:
+You can target specific components like executables, test suites, or benchmarks. Use the `--section` flag with the component type and name:
 
 ```bash
-cabal-edit add hspec --section test:my-test-suite
+# Add to an executable
+cabal-edit add lens --section exe:my-app
+
+# Add to a test suite
+cabal-edit add hspec --section test:unit-tests
+
+# Add to a benchmark
+cabal-edit add criterion --section bench:performance
 ```
 
 **Adding to conditional blocks:**
 
-You can add a dependency directly to an `if` block:
+You can add a dependency directly to an `if` block using the `--if` flag:
 
 ```bash
 cabal-edit add Win32 --if "os(windows)"
 ```
 
-If the block doesn't exist, `cabal-edit` will create it for you at the end of the section.
+If the block doesn't exist within the targeted section, `cabal-edit` will create it for you at the end of that section.
+
+**Source Dependencies (Git & Local Path):**
+
+You can add dependencies from remote Git repositories or local directories. `cabal-edit` will automatically update your `cabal.project` file to include these sources.
+
+```bash
+# Add from a Git repository
+cabal-edit add my-pkg --git "https://github.com/user/my-pkg" --tag "v1.2.3"
+
+# Add from a local directory
+cabal-edit add internal-pkg --path "./libs/internal-pkg"
+```
 
 ### 2. Removing a Dependency
 
@@ -57,9 +76,15 @@ To remove a library:
 cabal-edit rm old-library
 ```
 
+You can also specify the section to remove from:
+
+```bash
+cabal-edit rm old-library --section test:unit-tests
+```
+
 ### 3. Upgrading Dependencies
 
-To upgrade all dependencies to their latest versions:
+To upgrade all dependencies to their latest versions on Hackage:
 
 ```bash
 cabal-edit upgrade
@@ -67,61 +92,73 @@ cabal-edit upgrade
 
 ### Interactive Upgrade
 
-You can selectively upgrade dependencies using the interactive mode:
+Selective upgrades are supported via the interactive mode:
 
 ```bash
 cabal-edit upgrade -i
 ```
 
-This will present a list of all upgradeable dependencies, allowing you to toggle them using the spacebar before confirming with Enter.
+Use the **Arrow Keys** to navigate, **Space** to toggle selection, and **Enter** to confirm.
 
 ## Advanced Features
 
-### Managing Flags
+### Managing Cabal Flags
 
-Cabal flags can be managed directly:
+`cabal-edit` provides a dedicated command for managing flags in your `.cabal` file:
 
 ```bash
-# Add a flag
-cabal-edit flag add manual-feature
+# Add a new flag (default: False, manual: True)
+cabal-edit flag add my-feature
 
-# Enable it (sets default: True)
-cabal-edit flag enable manual-feature
+# Enable an existing flag (sets default: True)
+cabal-edit flag enable my-feature
+
+# Disable an existing flag (sets default: False)
+cabal-edit flag disable my-feature
+
+# Remove a flag stanza completely
+cabal-edit flag remove my-feature
 ```
 
 ### Setting Project Version
 
-Quickly update your package version:
+Update your package version without opening an editor:
 
 ```bash
-cabal-edit set-version 1.0.0
+cabal-edit set-version 1.0.0.0
 ```
 
-### Dry Runs
+### Dry Runs & Safety
 
-If you're unsure about a change, use `--dry-run` to see a preview without modifying any files:
+**Dry Runs:**
+Preview changes without writing to disk by using the `--dry-run` flag. This is supported by all modifying commands (`add`, `rm`, `upgrade`, `set-version`, `flag`).
 
 ```bash
 cabal-edit add lens --dry-run
 ```
 
+**Surgical Edits:**
+Unlike many tools that re-render the entire file (and lose your comments/formatting), `cabal-edit` performs "surgical" text edits. It identifies the exact lines to change and modifies them while keeping the rest of the file untouched.
+
+**Atomic Writes:**
+To prevent file corruption during power failures or crashes, `cabal-edit` writes to a temporary file first and then atomically moves it to the final destination.
+
 ### Hpack Support
 
-If you use `hpack` (`package.yaml`), `cabal-edit` will automatically detect it. Instead of modifying the `.cabal` file (which would be overwritten by `hpack`), `cabal-edit` will surgically edit your `package.yaml` to add or remove dependencies, preserving your YAML formatting and comments.
-
-A warning will still be displayed to remind you that the tool is operating on the Hpack configuration.
+If a `package.yaml` file is present, `cabal-edit` will automatically prioritize it. Commands like `add` and `rm` will modify your `package.yaml` instead of the `.cabal` file, ensuring that your changes aren't lost the next time Hpack generates the Cabal file.
 
 ## Workspace Support
 
-If you have a `cabal.project` file managing multiple packages:
+Manage multiple packages in a `cabal.project` workspace:
 
 ```bash
 # Add a dependency to ALL packages in the workspace
-cabal-edit -w add lens
+cabal-edit --workspace add lens
 
-# Target specific packages in the workspace
-cabal-edit -p my-lib -p my-app upgrade
+# Target specific packages within the workspace
+cabal-edit --package my-lib --package my-app upgrade
 ```
+
 
 ## Configuration
 
