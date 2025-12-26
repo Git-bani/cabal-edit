@@ -86,8 +86,8 @@ flagParser = FlagCmd <$> subparser
   )
 
 flagOptionsParser :: FlagOperation -> Parser FlagOptions
-flagOptionsParser op = FlagOptions
-  <$> (T.pack <$> argument str (metavar "FLAG_NAME"))
+flagOptionsParser op = FlagOptions . T.pack
+  <$> argument str (metavar "FLAG_NAME")
   <*> pure op
   <*> switch
       ( long "dry-run"
@@ -95,8 +95,8 @@ flagOptionsParser op = FlagOptions
 
 setVersionParser :: Parser Command
 setVersionParser = SetVersionCmd <$>
-  ( SetVersionOptions
-  <$> (T.pack <$> argument str (metavar "VERSION"))
+  ( SetVersionOptions . T.pack
+  <$> argument str (metavar "VERSION")
   <*> switch
       ( long "dry-run"
       <> help "Don't write changes" )
@@ -214,25 +214,22 @@ executeCommand (CLI verbose quiet workspace packages cmd) = do
           ctx <- loadProjectContext r
           let allPkgs = pcPackages ctx
           if null packages
-            then return $ map (Just ctx, ) (map snd allPkgs)
+            then return $ map ((Just ctx, ) . snd) allPkgs
             else 
               let filtered = filter (\(name, _) -> unPackageName name `elem` packages) allPkgs
                   foundNames = map (unPackageName . fst) filtered
                   missing = filter (`notElem` foundNames) packages
               in do
                 forM_ missing $ \m -> logError $ "Package not found in workspace: " <> m
-                return $ map (Just ctx, ) (map snd filtered)
-    else do
-      f <- findCabalFile
-      return $ maybe [] (\path -> [(Nothing, path)]) f
+                return $ map ((Just ctx, ) . snd) filtered
+    else maybe [] (\path -> [(Nothing, path)]) <$> findCabalFile
 
   if null targetFilesWithCtx
     then return $ Failure $ Error "No .cabal files found" FileNotFound
     else do
       let count = length targetFilesWithCtx
-      if count > 1 
-        then logInfo $ "Processing " <> T.pack (show count) <> " package(s)..."
-        else return ()
+      when (count > 1) $
+        logInfo $ "Processing " <> T.pack (show count) <> " package(s)..."
       
       forM_ targetFilesWithCtx $ \(mCtx, path) -> do
         res <- runOn mCtx path cmd

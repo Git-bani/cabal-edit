@@ -24,7 +24,7 @@ import qualified Distribution.Pretty as CabalPretty
 
 -- Convert CabalFile back to text with modifications
 serializeCabalFile :: CabalFile -> Text
-serializeCabalFile cf = cfRawContent cf
+serializeCabalFile = cfRawContent
 
 data DependencyOperation = Add | Remove | Update
 
@@ -74,14 +74,10 @@ insertDependencyLine eol leadingComma newDep content =
              insertion = case (maybePrev, maybeNext) of
                (Just prev, _) -> 
                  -- Insert after 'prev'
-                 case findLoc prev depsWithLoc of
-                   Just prevLineIdx -> InsertAfter prevLineIdx
-                   Nothing -> AppendToEnd -- Should not happen
+                 maybe AppendToEnd InsertAfter (findLoc prev depsWithLoc)
                (Nothing, Just next) ->
                  -- Insert before 'next' (newDep is first)
-                 case findLoc next depsWithLoc of
-                   Just nextLineIdx -> InsertBefore nextLineIdx
-                   Nothing -> AppendToEnd
+                 maybe AppendToEnd InsertBefore (findLoc next depsWithLoc)
                (Nothing, Nothing) -> AppendToEnd -- Empty list
                
          in applyInsertion eol leadingComma newDep insertion indent allLines before afterBlock
@@ -179,7 +175,7 @@ applyInsertion eol leadingComma dep AppendToEnd baseIndent allLines before after
       indentStr = T.replicate indentToUse " "
       
       -- Check if we need comma (if list not empty)
-      hasExisting = length (parseLinesWithDeps allLines) > 0
+      hasExisting = not (null (parseLinesWithDeps allLines))
       prefix = if hasExisting then (if leadingComma then ", " else "  ") else "  "
       suffix = if hasExisting && not leadingComma then "," else ""
       

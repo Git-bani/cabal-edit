@@ -277,7 +277,7 @@ cabalDepToInternal (CabalDep.Dependency pkgName versionRange _) =
     }
 
 versionRangeToConstraint :: VR.VersionRange -> VersionConstraint
-versionRangeToConstraint vr = CabalVersionRange vr
+versionRangeToConstraint = CabalVersionRange
 
 -- | Resolve bounds for a section or a conditional block
 resolveTargetBounds :: SectionTarget -> CabalFile -> Text -> Either Error (Int, Int, Text, Text) -- (Start, End, Prefix, Suffix)
@@ -370,7 +370,7 @@ findSectionPosition sectionName raw =
 
 -- | Find the start offset of a section, ignoring comments (line and block)
 findSectionStart :: Text -> Text -> Maybe Int
-findSectionStart target raw = go 0 0 raw
+findSectionStart target = go 0 0
   where
     targetLower = T.toLower target
     targetLen = T.length target
