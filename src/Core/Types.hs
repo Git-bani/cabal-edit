@@ -9,6 +9,7 @@ module Core.Types
   , Executable(..)
   , TestSuite(..)
   , Benchmark(..)
+  , CommonStanza(..)
   , Dependency(..)
   , DependencyType(..)
   , VersionConstraint(..)
@@ -105,6 +106,7 @@ data Section
   | ExecutableSection Executable
   | TestSuiteSection TestSuite
   | BenchmarkSection Benchmark
+  | CommonStanzaSection CommonStanza
   | UnknownSection Text Text  -- name, content
   deriving (Show, Eq)
 
@@ -112,6 +114,12 @@ data Library = Library
   { libName :: Maybe Text
   , libBuildDepends :: [Dependency]
   , libPosition :: TextSpan
+  } deriving (Show, Eq)
+
+data CommonStanza = CommonStanza
+  { commonName :: Text
+  , commonBuildDepends :: [Dependency]
+  , commonPosition :: TextSpan
   } deriving (Show, Eq)
 
 data Executable = Executable

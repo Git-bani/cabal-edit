@@ -22,8 +22,9 @@ import qualified Distribution.Types.Dependency as CabalDep
 import qualified Distribution.Types.VersionRange as VR
 import qualified Data.ByteString.Char8 as BS
 import Data.Text.Encoding (decodeUtf8)
-import Data.Maybe (maybeToList, isNothing)
+import Data.Maybe (maybeToList, isNothing, mapMaybe)
 import Data.List (find)
+import Data.Char (isSpace)
 
 -- Parse cabal file while preserving original formatting
 parseCabalFile :: FilePath -> IO (Result CabalFile)
@@ -62,7 +63,81 @@ extractSections gpd raw =
          , extractExecutables gpd raw
          , extractTestSuites gpd raw
          , extractBenchmarks gpd raw
+         , scanCommonStanzas raw
          ]
+
+scanCommonStanzas :: Text -> [Section]
+scanCommonStanzas raw = 
+  let ls = zip [0..] $ T.lines raw
+      commonHeaders = filter isCommonHeader ls
+  in map (buildCommonStanza raw) commonHeaders
+  where
+    isCommonHeader :: (Int, Text) -> Bool
+    isCommonHeader (_, line) = "common " `T.isPrefixOf` T.stripStart line
+
+    buildCommonStanza :: Text -> (Int, Text) -> Section
+    buildCommonStanza content (_, line) = 
+      let name = T.strip $ T.drop 7 $ T.stripStart line
+          fullName = "common " <> name
+          pos = findSectionPosition fullName content
+          deps = parseCommonDeps content pos
+      in CommonStanzaSection $ CommonStanza
+           { commonName = name
+           , commonBuildDepends = deps
+           , commonPosition = pos
+           }
+
+parseCommonDeps :: Text -> TextSpan -> [Dependency]
+parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
+  let sectionContent = T.take (end - start) (T.drop start content)
+      ls = T.lines sectionContent
+      -- Find build-depends block
+      -- This is a simplified parser: it assumes standard formatting or finds "build-depends:"
+      -- and consumes indented lines.
+      -- Reusing logic similar to Serializer would be best but for now let's do a quick extraction.
+      maybeBuildDepends = findIndexMatches "build-depends:" ls
+  in case maybeBuildDepends of
+       Nothing -> []
+       Just idx -> 
+         let (_, rest) = splitAt idx ls
+         in case rest of
+              [] -> []
+              (header:body) ->
+                 let (_, val) = T.breakOn ":" header
+                     firstLineVal = T.strip $ T.drop 1 val
+                     
+                     -- Collect indented lines
+                     indented = takeWhile isIndented body
+                     
+                     -- Parse the dependencies from the lines
+                     -- We construct a single string to split by comma, handling line continuations implicitly
+                     -- Actually, simpler: join all relevant lines, remove newlines, split by comma.
+                     allLines = if T.null firstLineVal then indented else firstLineVal : indented
+                     fullStr = T.intercalate " " (map T.strip allLines)
+                     
+                     depStrings = T.splitOn "," fullStr
+                     deps = mapMaybe parseSimpleDep depStrings
+                 in deps
+
+    where
+      isIndented t = " " `T.isPrefixOf` t || "\t" `T.isPrefixOf` t
+      
+      findIndexMatches p lines' = 
+        case find (\(_, l) -> p `T.isInfixOf` l) (zip [0..] lines') of
+          Just (i, _) -> Just i
+          Nothing -> Nothing
+
+      parseSimpleDep :: Text -> Maybe Dependency
+      parseSimpleDep t = 
+        let s = T.strip t
+        in if T.null s then Nothing 
+           else 
+             let (name, _) = T.break isSpace s
+             in Just $ Dependency 
+                  { depName = unsafeMkPackageName (T.strip name)
+                  , depVersionConstraint = Nothing 
+                  , depType = BuildDepends 
+                  }
 
 -- Extract library section
 extractLibrary :: GPD.GenericPackageDescription -> Text -> Maybe Section
@@ -249,6 +324,7 @@ findDependencies (LibrarySection lib) = libBuildDepends lib
 findDependencies (ExecutableSection exe) = exeBuildDepends exe
 findDependencies (TestSuiteSection test) = testBuildDepends test
 findDependencies (BenchmarkSection bench) = benchBuildDepends bench
+findDependencies (CommonStanzaSection common) = commonBuildDepends common
 findDependencies (UnknownSection _ _) = []
 
 findSection :: SectionTarget -> CabalFile -> Maybe Section
@@ -267,6 +343,7 @@ matchesSectionTarget (TargetNamed name) (LibrarySection lib) = Just name == libN
 matchesSectionTarget (TargetNamed name) (ExecutableSection exe) = name == exeName exe
 matchesSectionTarget (TargetNamed name) (TestSuiteSection test) = name == testName test
 matchesSectionTarget (TargetNamed name) (BenchmarkSection bench) = name == benchName bench
+matchesSectionTarget (TargetNamed name) (CommonStanzaSection common) = name == commonName common
 matchesSectionTarget _ _ = False
 
 getSectionBounds :: Section -> TextSpan
@@ -274,4 +351,5 @@ getSectionBounds (LibrarySection lib) = libPosition lib
 getSectionBounds (ExecutableSection exe) = exePosition exe
 getSectionBounds (TestSuiteSection test) = testPosition test
 getSectionBounds (BenchmarkSection bench) = benchPosition bench
+getSectionBounds (CommonStanzaSection common) = commonPosition common
 getSectionBounds (UnknownSection _ _) = TextSpan 0 0

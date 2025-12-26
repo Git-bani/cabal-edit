@@ -12,7 +12,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath ((</>))
-import Core.Types (Result(..), Error(..), ErrorCode(..))
+import Core.Types (Result(..))
 import Core.ProjectContext (findProjectRoot)
 import Core.Safety (safeWriteFile) -- Generic safe write logic
 

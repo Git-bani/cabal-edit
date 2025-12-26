@@ -8,16 +8,15 @@ import Core.Types
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.Directory (getCurrentDirectory, removeFile, doesFileExist, setCurrentDirectory, createDirectoryIfMissing, removeDirectoryRecursive)
+import System.Directory (getCurrentDirectory, removeFile, setCurrentDirectory, createDirectoryIfMissing, removeDirectoryRecursive)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
-import Control.Monad (when)
 
 spec :: Spec
 spec = describe "Business.SourceDep" $ do
   
   it "adds a git dependency to cabal.project and .cabal" $ do
-    withTempEnv basicCabalFile $ \dir cabalPath projPath -> do
+    withTempEnv basicCabalFile $ \_dir cabalPath projPath -> do
       let opts = AddOptions 
             { aoPackageName = "foo"
             , aoVersion = Nothing
@@ -55,7 +54,7 @@ spec = describe "Business.SourceDep" $ do
       T.unpack projContent `shouldContain` "tag: v1.0"
 
   it "adds a local path dependency to cabal.project and .cabal" $ do
-    withTempEnv basicCabalFile $ \dir cabalPath projPath -> do
+    withTempEnv basicCabalFile $ \_dir cabalPath projPath -> do
       let opts = AddOptions 
             { aoPackageName = "bar"
             , aoVersion = Nothing

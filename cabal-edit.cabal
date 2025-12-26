@@ -97,6 +97,7 @@ test-suite cabal-edit-test
                     , Business.ValidationSpec
                     , Business.SubLibrarySpec
                     , Business.SourceDepSpec
+                    , Business.CommonStanzaSpec
                     , Core.ProjectContextSpec
                     , Integration.EndToEndSpec
                     , Utils.ConfigSpec
