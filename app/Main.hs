@@ -117,6 +117,10 @@ addParser = AddCmd <$>
       <> metavar "SECTION"
       <> value TargetLib
       <> help "Target section (library/executable/test)" )
+  <*> optional (T.pack <$> strOption
+      ( long "if"
+      <> metavar "CONDITION"
+      <> help "Add dependency to a conditional block (e.g. 'os(windows)')" ))
   <*> switch
       ( long "dev"
       <> short 'd'

@@ -26,13 +26,14 @@ spec = describe "Golden Roundtrip" $ do
         let addOpts = AddOptions 
               { aoPackageNames = ["containers"]
               , aoVersion = Just ">=0.1"
-                          , aoSection = TargetLib
-                          , aoDev = False
-                          , aoDryRun = False
-                          , aoGit = Nothing
-                          , aoTag = Nothing
-                          , aoPath = Nothing
-                          }        
+              , aoSection = TargetLib
+              , aoCondition = Nothing
+              , aoDev = False
+              , aoDryRun = False
+              , aoGit = Nothing
+              , aoTag = Nothing
+              , aoPath = Nothing
+              }        
         resAdd <- addDependency Nothing addOpts path
         resAdd `shouldSatisfy` isSuccess
         

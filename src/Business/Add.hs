@@ -71,7 +71,11 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
           -- Strategy: Always use `cabalFile` to find section names, but use a fresh search in `currentContent`.
           
           -- Determine target section/block
-          let target = aoSection opts
+          let baseTarget = aoSection opts
+          let target = case aoCondition opts of
+                         Nothing -> baseTarget
+                         Just cond -> TargetConditional baseTarget cond
+          
           case resolveTargetBounds target cabalFile currentContent of
             Left err -> return $ Failure err
             Right (start, end, prefix, suffix) -> do

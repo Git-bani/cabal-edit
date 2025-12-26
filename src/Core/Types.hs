@@ -234,6 +234,7 @@ data SetVersionOptions = SetVersionOptions
 data AddOptions = AddOptions
   { aoVersion :: Maybe Text
   , aoSection :: SectionTarget
+  , aoCondition :: Maybe Text
   , aoDev :: Bool
   , aoDryRun :: Bool
   , aoGit :: Maybe Text

@@ -21,6 +21,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["aeson"]
             , aoVersion = Just "==2.0.0.0"
             , aoSection = TargetLib -- defaults to library
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -44,6 +45,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["mtl"]
             , aoVersion = Just "==2.2.2"
             , aoSection = TargetLib
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -63,6 +65,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["hspec"]
             , aoVersion = Just ">=2.8"
             , aoSection = TargetNamed "my-test"
+            , aoCondition = Nothing
             , aoDev = True
             , aoDryRun = False
             , aoGit = Nothing
@@ -83,6 +86,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["hspec"]
             , aoVersion = Just ">=2.8"
             , aoSection = TargetNamed "non-existent-section"
+            , aoCondition = Nothing
             , aoDev = True
             , aoDryRun = False
             , aoGit = Nothing
@@ -99,6 +103,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["text"]
             , aoVersion = Just "==1.2.4.1"
             , aoSection = TargetLib
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -121,6 +126,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["aeson"]
             , aoVersion = Nothing
             , aoSection = TargetLib
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -141,6 +147,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["bytestring", "vector"]
             , aoVersion = Nothing
             , aoSection = TargetLib
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -164,7 +171,8 @@ spec = describe "Business.Add" $ do
       let opts = AddOptions 
             { aoPackageNames = ["directory"]
             , aoVersion = Nothing
-            , aoSection = TargetConditional TargetLib "os(windows)"
+            , aoSection = TargetLib
+            , aoCondition = Just "os(windows)"
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -181,7 +189,8 @@ spec = describe "Business.Add" $ do
       let opts = AddOptions 
             { aoPackageNames = ["unix"]
             , aoVersion = Nothing
-            , aoSection = TargetConditional TargetLib "os(linux)"
+            , aoSection = TargetLib
+            , aoCondition = Just "os(linux)"
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -192,6 +201,24 @@ spec = describe "Business.Add" $ do
       content <- TIO.readFile path
       T.unpack content `shouldContain` "if os(linux)"
       T.unpack content `shouldContain` "unix"
+
+  it "integrates --if flag through CLI options" $ do
+    withTempCabalFile basicCabalFile $ \path -> do
+      let opts = AddOptions 
+            { aoPackageNames = ["Win32"]
+            , aoVersion = Nothing
+            , aoSection = TargetLib
+            , aoCondition = Just "os(windows)"
+            , aoDev = False
+            , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
+            }
+      _ <- addDependency Nothing opts path
+      content <- TIO.readFile path
+      T.unpack content `shouldContain` "if os(windows)"
+      T.unpack content `shouldContain` "Win32"
 
 basicCabalFile :: Text
 basicCabalFile = T.unlines

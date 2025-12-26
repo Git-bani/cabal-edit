@@ -21,6 +21,7 @@ spec = describe "Common Stanza Support" $ do
             { aoPackageNames = ["aeson"]
             , aoVersion = Nothing
             , aoSection = TargetNamed "shared-props" -- Matches 'common shared-props'
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing

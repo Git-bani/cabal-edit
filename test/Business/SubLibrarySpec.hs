@@ -21,6 +21,7 @@ spec = describe "Sub-library Support" $ do
             { aoPackageNames = ["containers"]
             , aoVersion = Just ">=0.6"
             , aoSection = TargetNamed "sublib"
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -43,6 +44,7 @@ spec = describe "Sub-library Support" $ do
             { aoPackageNames = ["mtl"]
             , aoVersion = Just ">=2.2"
             , aoSection = TargetLib
+            , aoCondition = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
