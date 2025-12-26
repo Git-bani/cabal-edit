@@ -37,9 +37,11 @@ library cabal-edit-internal
                     , Core.DependencyResolver
                     , Core.ProjectContext
                     , Core.ProjectEditor
+                    , Core.HpackEditor
                     , Core.Safety
                     , Business.Add
                     , Business.Remove
+                    , Business.Hpack
                     , Business.Upgrade
                     , Business.SetVersion
                     , Business.Flag
@@ -53,6 +55,7 @@ library cabal-edit-internal
     build-depends:    base >=4.14 && <5
                     , Cabal >=3.6 && <3.12
                     , aeson >=2.0 && <2.3
+                    , yaml >=0.11 && <0.12
                     , text >=1.2 && <2.2
                     , bytestring >=0.11 && <0.13
                     , http-conduit >=2.3 && <2.4

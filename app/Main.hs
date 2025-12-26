@@ -6,6 +6,7 @@ module Main (main) where
 import Options.Applicative hiding (Success, Failure)
 import Business.Add
 import Business.Remove
+import Business.Hpack
 import Business.Upgrade
 import Business.SetVersion
 import Business.Flag
@@ -222,7 +223,14 @@ executeCommand (CLI verbose quiet workspace packages cmd) = do
               in do
                 forM_ missing $ \m -> logError $ "Package not found in workspace: " <> m
                 return $ map ((Just ctx, ) . snd) filtered
-    else maybe [] (\path -> [(Nothing, path)]) <$> findCabalFile
+    else do
+      cwd <- getCurrentDirectory
+      hpackExists <- doesFileExist (cwd </> "package.yaml")
+      if hpackExists
+        then return [(Nothing, "package.yaml")]
+        else do
+          f <- findCabalFile
+          return $ maybe [] (\path -> [(Nothing, path)]) f
 
   if null targetFilesWithCtx
     then return $ Failure $ Error "No .cabal files found" FileNotFound
@@ -252,11 +260,18 @@ runOn maybeCtx path cmd = do
   when hasHpack $ do
     logWarning $ "package.yaml detected. Changes to " <> T.pack path <> " may be overwritten by hpack!"
   
+  let isHpack = "package.yaml" `isSuffixOf` path
   logInfo $ actionDesc <> " (" <> T.pack path <> ")..."
   
   case cmd of
-    AddCmd opts -> addDependency maybeCtx opts path
-    RemoveCmd opts -> removeDependency opts path
+    AddCmd opts -> 
+      if isHpack 
+      then addHpackDependency opts path
+      else addDependency maybeCtx opts path
+    RemoveCmd opts -> 
+      if isHpack
+      then removeHpackDependency opts path
+      else removeDependency opts path
     UpgradeCmd opts -> upgradeDependencies opts path
     SetVersionCmd opts -> setVersion opts path
     FlagCmd opts -> handleFlag opts path

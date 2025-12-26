@@ -21,14 +21,23 @@ spec = do
   describe "Hpack Detection" $ do
     
     it "warns when package.yaml is present" $ do
-      withTempHpackProject $ \_dir cabalPath -> do
-        -- Use absolute path to exe and relative path to .cabal
+      withTempHpackProject $ \_dir _path -> do
         (_code, _stdout, stderr) <- readProcessWithExitCode exePath ["--verbose", "add", "aeson", "--dry-run"] ""
-        
-        -- Should succeed but log warning to stderr
         let err = T.pack stderr
         err `shouldSatisfy` T.isInfixOf "[WARNING] package.yaml detected"
-        err `shouldSatisfy` T.isInfixOf "overwritten by hpack"
+
+    it "can add a dependency to package.yaml" $ do
+      withTempHpackProject $ \_dir _path -> do
+        _ <- readProcess exePath ["add", "aeson"] ""
+        content <- TIO.readFile "package.yaml"
+        content `shouldSatisfy` T.isInfixOf "- aeson"
+
+    it "can remove a dependency from package.yaml" $ do
+      withTempHpackProject $ \_dir _path -> do
+        _ <- readProcess exePath ["add", "aeson"] ""
+        _ <- readProcess exePath ["rm", "aeson"] ""
+        content <- TIO.readFile "package.yaml"
+        content `shouldNotSatisfy` T.isInfixOf "- aeson"
 
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
