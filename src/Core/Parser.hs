@@ -69,6 +69,7 @@ extractSections gpd raw =
          , extractTestSuites gpd raw
          , extractBenchmarks gpd raw
          , scanCommonStanzas raw
+         , scanFlags raw
          ]
 
 scanCommonStanzas :: Text -> [Section]
@@ -91,6 +92,45 @@ scanCommonStanzas raw =
            , commonBuildDepends = deps
            , commonPosition = pos
            }
+
+scanFlags :: Text -> [Section]
+scanFlags raw = 
+  let ls = zip [0..] $ T.lines raw
+      flagHeaders = filter isFlagHeader ls
+  in map (buildFlagStanza raw) flagHeaders
+  where
+    isFlagHeader :: (Int, Text) -> Bool
+    isFlagHeader (_, line) = "flag " `T.isPrefixOf` T.stripStart line
+
+    buildFlagStanza :: Text -> (Int, Text) -> Section
+    buildFlagStanza content (_, line) = 
+      let name = T.strip $ T.drop 5 $ T.stripStart line
+          fullName = "flag " <> name
+          pos = findSectionPosition fullName content
+          (def, man) = parseFlagFields content pos
+      in FlagSection $ FlagStanza
+           { flagName = name
+           , flagDefault = def
+           , flagManual = man
+           , flagPosition = pos
+           }
+
+parseFlagFields :: Text -> TextSpan -> (Bool, Bool)
+parseFlagFields content (TextSpan (TextOffset start) (TextOffset end)) = 
+  let sectionContent = T.take (end - start) (T.drop start content)
+      ls = map T.strip $ T.lines sectionContent
+      def = maybe False parseBool $ findField "default:" ls
+      man = maybe False parseBool $ findField "manual:" ls
+  in (def, man)
+  where
+    findField p lines' = 
+      case find (\l -> p `T.isPrefixOf` T.toLower l) lines' of
+        Just l -> Just $ T.strip $ T.drop (T.length p) l
+        Nothing -> Nothing
+    
+    parseBool t = 
+      let s = T.toLower t
+      in s == "true" || s == "yes"
 
 parseCommonDeps :: Text -> TextSpan -> [Dependency]
 parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
@@ -287,6 +327,7 @@ describeSection (ExecutableSection exe) = "executable " <> exeName exe
 describeSection (TestSuiteSection test) = "test-suite " <> testName test
 describeSection (BenchmarkSection bench) = "benchmark " <> benchName bench
 describeSection (CommonStanzaSection common) = "common " <> commonName common
+describeSection (FlagSection f) = "flag " <> flagName f
 describeSection (UnknownSection name _) = name
 
 -- | Find position of an 'if' block within section content
@@ -405,6 +446,7 @@ findDependencies (ExecutableSection exe) = exeBuildDepends exe
 findDependencies (TestSuiteSection test) = testBuildDepends test
 findDependencies (BenchmarkSection bench) = benchBuildDepends bench
 findDependencies (CommonStanzaSection common) = commonBuildDepends common
+findDependencies (FlagSection _) = []
 findDependencies (UnknownSection _ _) = []
 
 findSection :: SectionTarget -> CabalFile -> Maybe Section
@@ -434,4 +476,5 @@ getSectionBounds (ExecutableSection exe) = exePosition exe
 getSectionBounds (TestSuiteSection test) = testPosition test
 getSectionBounds (BenchmarkSection bench) = benchPosition bench
 getSectionBounds (CommonStanzaSection common) = commonPosition common
+getSectionBounds (FlagSection f) = flagPosition f
 getSectionBounds (UnknownSection _ _) = TextSpan 0 0

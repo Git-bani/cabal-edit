@@ -7,6 +7,7 @@ import qualified Business.RemoveSpec
 import qualified Business.SubLibrarySpec
 import qualified Business.ValidationSpec
 import qualified Business.SetVersionSpec
+import qualified Business.FlagSpec
 import qualified Business.SourceDepSpec
 import qualified Business.CommonStanzaSpec
 import qualified Core.CRLFSpec
@@ -31,6 +32,7 @@ main = hspec $ do
   describe "Business.SubLibrary" Business.SubLibrarySpec.spec
   describe "Business.Validation" Business.ValidationSpec.spec
   describe "Business.SetVersion" Business.SetVersionSpec.spec
+  describe "Business.Flag" Business.FlagSpec.spec
   describe "Business.SourceDep" Business.SourceDepSpec.spec
   describe "Business.CommonStanza" Business.CommonStanzaSpec.spec
   describe "Core.CRLF" Core.CRLFSpec.spec

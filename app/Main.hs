@@ -8,6 +8,7 @@ import Business.Add
 import Business.Remove
 import Business.Upgrade
 import Business.SetVersion
+import Business.Flag
 import Core.Types
 import Core.ProjectContext
 import Utils.Logging
@@ -72,7 +73,24 @@ commandParser = subparser
   <> command "rm" (info removeParser (progDesc "Remove a dependency"))
   <> command "upgrade" (info upgradeParser (progDesc "Upgrade dependencies"))
   <> command "set-version" (info setVersionParser (progDesc "Set package version"))
+  <> command "flag" (info flagParser (progDesc "Manage Cabal flags"))
   )
+
+flagParser :: Parser Command
+flagParser = FlagCmd <$> subparser
+  ( command "add" (info (flagOptionsParser FlagAdd) (progDesc "Add a new flag"))
+  <> command "enable" (info (flagOptionsParser FlagEnable) (progDesc "Enable an existing flag (set default: True)"))
+  <> command "disable" (info (flagOptionsParser FlagDisable) (progDesc "Disable an existing flag (set default: False)"))
+  <> command "remove" (info (flagOptionsParser FlagRemove) (progDesc "Remove a flag"))
+  )
+
+flagOptionsParser :: FlagOperation -> Parser FlagOptions
+flagOptionsParser op = FlagOptions
+  <$> (T.pack <$> argument str (metavar "FLAG_NAME"))
+  <*> pure op
+  <*> switch
+      ( long "dry-run"
+      <> help "Don't write changes" )
 
 setVersionParser :: Parser Command
 setVersionParser = SetVersionCmd <$>
@@ -233,6 +251,7 @@ runOn maybeCtx path cmd = do
     RemoveCmd opts -> removeDependency opts path
     UpgradeCmd opts -> upgradeDependencies opts path
     SetVersionCmd opts -> setVersion opts path
+    FlagCmd opts -> handleFlag opts path
 
 describeAction :: Command -> Text
 describeAction (AddCmd opts) = "Adding " <> T.intercalate ", " (aoPackageNames opts)
@@ -241,6 +260,16 @@ describeAction (UpgradeCmd opts) =
   if null (uoPackageNames opts) then "Upgrading all dependencies"
   else "Upgrading " <> T.intercalate ", " (uoPackageNames opts)
 describeAction (SetVersionCmd opts) = "Setting version to " <> svoVersion opts
+describeAction (FlagCmd opts) = describeFlagAction opts
+
+describeFlagAction :: FlagOptions -> Text
+describeFlagAction opts = 
+  let name = foFlagName opts
+  in case foOperation opts of
+       FlagAdd -> "Adding flag " <> name
+       FlagEnable -> "Enabling flag " <> name
+       FlagDisable -> "Disabling flag " <> name
+       FlagRemove -> "Removing flag " <> name
 
 -- Find .cabal file in current directory
 findCabalFile :: IO (Maybe FilePath)

@@ -78,6 +78,9 @@ sectionToTarget (ExecutableSection exe) = TargetExe (Just $ exeName exe)
 sectionToTarget (TestSuiteSection test) = TargetTest (Just $ testName test)
 sectionToTarget (BenchmarkSection bench) = TargetBench (Just $ benchName bench)
 sectionToTarget (CommonStanzaSection common) = TargetNamed (commonName common)
+sectionToTarget (FlagSection f) = TargetCommon (Just $ flagName f) -- Reusing TargetCommon or add TargetFlag?
+-- Let's use TargetNamed for now as it's safe.
+-- Actually, let's use TargetNamed.
 sectionToTarget (UnknownSection name _) = TargetNamed name
 
 applyRemoval :: PackageName -> Dependency -> Text -> Bool -> CabalFile -> Result Text -> SectionTarget -> Result Text

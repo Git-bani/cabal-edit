@@ -13,6 +13,7 @@ module Core.Types
   , TestSuite(..)
   , Benchmark(..)
   , CommonStanza(..)
+  , FlagStanza(..)
   , Dependency(..)
   , DependencyType(..)
   , VersionConstraint(..)
@@ -36,6 +37,8 @@ module Core.Types
   , RemoveOptions(..)
   , UpgradeOptions(..)
   , SetVersionOptions(..)
+  , FlagOptions(..)
+  , FlagOperation(..)
   
     -- * Results
   , Result(..)
@@ -117,8 +120,16 @@ data Section
   | TestSuiteSection TestSuite
   | BenchmarkSection Benchmark
   | CommonStanzaSection CommonStanza
+  | FlagSection FlagStanza
   | UnknownSection Text Text  -- name, content
   deriving (Show, Eq, Generic, NFData)
+
+data FlagStanza = FlagStanza
+  { flagName :: Text
+  , flagDefault :: Bool
+  , flagManual :: Bool
+  , flagPosition :: TextSpan
+  } deriving (Show, Eq, Generic, NFData)
 
 data Library = Library
   { libName :: Maybe Text
@@ -199,12 +210,26 @@ data Command
   | RemoveCmd RemoveOptions
   | UpgradeCmd UpgradeOptions
   | SetVersionCmd SetVersionOptions
-  deriving (Show, Eq)
+  | FlagCmd FlagOptions
+  deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
+
+data FlagOptions = FlagOptions
+  { foFlagName :: Text
+  , foOperation :: FlagOperation
+  , foDryRun :: Bool
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
+
+data FlagOperation = FlagAdd | FlagEnable | FlagDisable | FlagRemove
+  deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
 
 data SetVersionOptions = SetVersionOptions
   { svoVersion :: Text
   , svoDryRun :: Bool
-  } deriving (Show, Eq)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
 
 data AddOptions = AddOptions
   { aoVersion :: Maybe Text
@@ -215,18 +240,21 @@ data AddOptions = AddOptions
   , aoTag :: Maybe Text
   , aoPath :: Maybe Text
   , aoPackageNames :: [Text]
-  } deriving (Show, Eq)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
 
 data RemoveOptions = RemoveOptions
   { roSection :: SectionTarget
   , roDryRun :: Bool
   , roPackageNames :: [Text]
-  } deriving (Show, Eq)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
 
 data UpgradeOptions = UpgradeOptions
   { uoDryRun :: Bool
   , uoPackageNames :: [Text]  -- Empty means all
-  } deriving (Show, Eq)
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
 
 -- Result types
 data Result a
