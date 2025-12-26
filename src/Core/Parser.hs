@@ -339,6 +339,8 @@ matchesSectionTarget (TargetTest Nothing) (TestSuiteSection _) = True
 matchesSectionTarget (TargetTest (Just name)) (TestSuiteSection test) = name == testName test
 matchesSectionTarget (TargetBench Nothing) (BenchmarkSection _) = True
 matchesSectionTarget (TargetBench (Just name)) (BenchmarkSection bench) = name == benchName bench
+matchesSectionTarget (TargetCommon Nothing) (CommonStanzaSection _) = True
+matchesSectionTarget (TargetCommon (Just name)) (CommonStanzaSection common) = name == commonName common
 matchesSectionTarget (TargetNamed name) (LibrarySection lib) = Just name == libName lib
 matchesSectionTarget (TargetNamed name) (ExecutableSection exe) = name == exeName exe
 matchesSectionTarget (TargetNamed name) (TestSuiteSection test) = name == testName test

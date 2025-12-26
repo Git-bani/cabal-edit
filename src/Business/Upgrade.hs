@@ -58,12 +58,14 @@ processSection _ _ _ (Failure err) _ = return $ Failure err
 processSection opts eol leadingComma (Success content) section = do
   let deps = findDependencies section
   
-  -- Filter dependencies if user requested specific package
-  let targetResult = case uoPackageName opts of
-                       Nothing -> Success deps
-                       Just name -> case mkPackageName name of
-                                      Left err -> Failure $ Error err InvalidDependency
-                                      Right pkgName -> Success $ filter (\d -> depName d == pkgName) deps
+  -- Filter dependencies if user requested specific packages
+  let targetResult = if null (uoPackageNames opts)
+                     then Success deps
+                     else 
+                       let pkgNamesResult = mapM mkPackageName (uoPackageNames opts)
+                       in case pkgNamesResult of
+                            Left err -> Failure $ Error err InvalidDependency
+                            Right names -> Success $ filter (\d -> depName d `elem` names) deps
   
   case targetResult of
     Failure err -> return $ Failure err

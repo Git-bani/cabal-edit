@@ -89,6 +89,7 @@ data SectionTarget
   | TargetExe (Maybe Text)  -- Nothing = any/first, Just = specific name
   | TargetTest (Maybe Text)
   | TargetBench (Maybe Text)
+  | TargetCommon (Maybe Text)
   | TargetNamed Text        -- Specific name, type unknown (legacy/fuzzy match)
   deriving (Show, Eq)
 
@@ -189,25 +190,25 @@ data Command
   deriving (Show, Eq)
 
 data AddOptions = AddOptions
-  { aoPackageName :: Text
-  , aoVersion :: Maybe Text
+  { aoVersion :: Maybe Text
   , aoSection :: SectionTarget
   , aoDev :: Bool
   , aoDryRun :: Bool
   , aoGit :: Maybe Text
   , aoTag :: Maybe Text
   , aoPath :: Maybe Text
+  , aoPackageNames :: [Text]
   } deriving (Show, Eq)
 
 data RemoveOptions = RemoveOptions
-  { roPackageName :: Text
-  , roSection :: SectionTarget
+  { roSection :: SectionTarget
   , roDryRun :: Bool
+  , roPackageNames :: [Text]
   } deriving (Show, Eq)
 
 data UpgradeOptions = UpgradeOptions
-  { uoPackageName :: Maybe Text  -- Nothing means all
-  , uoDryRun :: Bool
+  { uoDryRun :: Bool
+  , uoPackageNames :: [Text]  -- Empty means all
   } deriving (Show, Eq)
 
 -- Result types

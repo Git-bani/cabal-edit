@@ -24,7 +24,7 @@ spec = describe "Golden Roundtrip" $ do
         
         -- 1. Add a unique dependency
         let addOpts = AddOptions 
-              { aoPackageName = "containers"
+              { aoPackageNames = ["containers"]
               , aoVersion = Just ">=0.1"
                           , aoSection = TargetLib
                           , aoDev = False
@@ -38,7 +38,7 @@ spec = describe "Golden Roundtrip" $ do
         
         -- 2. Remove the same dependency
         let rmOpts = RemoveOptions
-              { roPackageName = "containers"
+              { roPackageNames = ["containers"]
               , roSection = TargetLib
               , roDryRun = False
               }

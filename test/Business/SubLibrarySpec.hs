@@ -18,7 +18,7 @@ spec = describe "Sub-library Support" $ do
   it "adds a dependency to a named sub-library" $ do
     withTempCabalFile cabalWithSubLib $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "containers"
+            { aoPackageNames = ["containers"]
             , aoVersion = Just ">=0.6"
             , aoSection = TargetNamed "sublib"
             , aoDev = False
@@ -40,7 +40,7 @@ spec = describe "Sub-library Support" $ do
   it "targets main library when TargetLib is used even if sub-libraries exist" $ do
     withTempCabalFile cabalWithSubLib $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "mtl"
+            { aoPackageNames = ["mtl"]
             , aoVersion = Just ">=2.2"
             , aoSection = TargetLib
             , aoDev = False

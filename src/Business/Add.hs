@@ -10,8 +10,10 @@ import Core.DependencyResolver
 import Core.ProjectEditor
 import Utils.Logging (logInfo)
 import Utils.Config (loadConfig, Config(..))
+import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Control.Monad (foldM)
 
 addDependency :: AddOptions -> FilePath -> IO (Result ())
 addDependency opts path = do
@@ -23,64 +25,86 @@ addDependency opts path = do
   case sourceDepResult of
     Failure err -> return $ Failure err
     Success () -> do
-      -- 1. Validate package name
-      case mkPackageName (aoPackageName opts) of
-        Left err -> return $ Failure $ Error err InvalidDependency
-        Right pkgName -> do
-          -- 2. Parse cabal file
-          parseResult <- parseCabalFile path
-          case parseResult of
+      -- 1. Parse cabal file
+      parseResult <- parseCabalFile path
+      case parseResult of
+        Failure err -> return $ Failure err
+        Success cabalFile -> do
+          -- 2. Process each package
+          let eol = cfLineEndings cabalFile
+          let initialContent = cfRawContent cabalFile
+          
+          finalContentResult <- foldM (processPackage opts eol leadingComma cabalFile) (Success initialContent) (aoPackageNames opts)
+          
+          case finalContentResult of
             Failure err -> return $ Failure err
-            Success cabalFile -> do
+            Success finalContent -> 
+              if aoDryRun opts
+                then do
+                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                  TIO.putStrLn finalContent
+                  return $ Success ()
+                else safeWriteCabal path finalContent
+
+processPackage :: AddOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
+processPackage _ _ _ _ (Failure err) _ = return $ Failure err
+processPackage opts eol leadingComma cabalFile (Success currentContent) pkgNameText = do
+  case mkPackageName pkgNameText of
+    Left err -> return $ Failure $ Error err InvalidDependency
+    Right pkgName -> do
+      -- Resolve version / Constraint
+      let isSourceDep = isJust (aoGit opts) || isJust (aoPath opts)
+      constraintResult <- if isSourceDep && isNothing (aoVersion opts)
+                          then return $ Success AnyVersion
+                          else resolveVersionConstraint pkgName (aoVersion opts)
+      
+      case constraintResult of
+        Failure err -> return $ Failure err
+        Success constraint -> do
+          -- Determine target section (re-finding in the list of sections from parsed file)
+          -- Note: sections positions might shift if we were editing the whole file at once, 
+          -- but here we are accumulating changes in `currentContent`.
+          -- We need to find the section again in the updated content.
+          -- Actually, findSection returns a Section with position.
+          -- If we edit one section, other sections' positions might change.
+          -- Strategy: Always use `cabalFile` to find section names, but use a fresh search in `currentContent`.
+          
+          case findSection (aoSection opts) cabalFile of
+            Nothing -> return $ Failure $ Error "Section not found" FileNotFound
+            Just sec -> do
+              -- Create dependency
+              let dep = Dependency
+                    { depName = pkgName
+                    , depVersionConstraint = Just constraint
+                    , depType = if aoDev opts then TestDepends else BuildDepends
+                    }
               
-              -- 3. Resolve version / Constraint
-              -- If source dep is used, we default to AnyVersion (no constraint) unless specified
-              let isSourceDep = isJust (aoGit opts) || isJust (aoPath opts)
+              -- We need fresh bounds for the section in the current (possibly modified) content
+              let secHeader = describeSection sec
+              let TextSpan (TextOffset start) (TextOffset end) = findSectionPosition secHeader currentContent
               
-              constraintResult <- if isSourceDep && isNothing (aoVersion opts)
-                                  then return $ Success AnyVersion
-                                  else resolveVersionConstraint pkgName (aoVersion opts)
+              let (before, rest) = T.splitAt start currentContent
+              let (sectionContent, after) = T.splitAt (end - start) rest
               
-              case constraintResult of
-                Failure err -> return $ Failure err
-                Success constraint -> do
-                  -- 4. Determine target section
-                  let section = findSection (aoSection opts) cabalFile
-                  
-                  case section of
-                    Nothing -> return $ Failure $ Error "Section not found" FileNotFound
-                    Just sec -> do
-                      -- 5. Create dependency
-                      let dep = Dependency
-                            { depName = pkgName
-                            , depVersionConstraint = Just constraint
-                            , depType = if aoDev opts then TestDepends else BuildDepends
-                            }
-                      
-                      -- 6. Serialize and Write
-                      let TextSpan (TextOffset start) (TextOffset end) = getSectionBounds sec
-                      let fullContent = cfRawContent cabalFile
-                      let (before, rest) = T.splitAt start fullContent
-                      let (sectionContent, after) = T.splitAt (end - start) rest
-                      
-                      let eol = cfLineEndings cabalFile
-                      
-                      -- Check if dependency exists to avoid duplicates
-                      let existingDeps = findDependencies sec
-                      let alreadyExists = any (\d -> depName d == pkgName) existingDeps
-                      
-                      let newSectionContent = if alreadyExists
-                            then updateDependencyLine eol leadingComma dep sectionContent
-                            else insertDependencyLine eol leadingComma dep sectionContent
-                            
-                      let newFullContent = before <> newSectionContent <> after
-                      
-                      if aoDryRun opts
-                        then do
-                          logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                          TIO.putStrLn newFullContent
-                          return $ Success ()
-                        else safeWriteCabal path newFullContent
+              -- Check if dependency exists in THIS section
+              -- (Ideally we'd parse sectionContent to get deps, but for now we can check raw text or rely on findDependencies from original sec)
+              let alreadyExists = unPackageName pkgName `T.isInfixOf` sectionContent -- simple check
+              
+              let newSectionContent = if alreadyExists
+                    then updateDependencyLine eol leadingComma dep sectionContent
+                    else insertDependencyLine eol leadingComma dep sectionContent
+                    
+              return $ Success $ before <> newSectionContent <> after
+
+describeSection :: Section -> Text
+describeSection (LibrarySection lib) = case libName lib of
+  Nothing -> "library"
+  Just n -> "library " <> n
+describeSection (ExecutableSection exe) = "executable " <> exeName exe
+describeSection (TestSuiteSection test) = "test-suite " <> testName test
+describeSection (BenchmarkSection bench) = "benchmark " <> benchName bench
+describeSection (CommonStanzaSection common) = "common " <> commonName common
+describeSection (UnknownSection name _) = name
 
 handleSourceDependency :: AddOptions -> IO (Result ())
 handleSourceDependency opts

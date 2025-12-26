@@ -18,7 +18,7 @@ spec = describe "Business.Add" $ do
   it "adds a dependency with explicit version to a library" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "aeson"
+            { aoPackageNames = ["aeson"]
             , aoVersion = Just "==2.0.0.0"
             , aoSection = TargetLib -- defaults to library
             , aoDev = False
@@ -41,7 +41,7 @@ spec = describe "Business.Add" $ do
   it "preserves existing dependencies" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "mtl"
+            { aoPackageNames = ["mtl"]
             , aoVersion = Just "==2.2.2"
             , aoSection = TargetLib
             , aoDev = False
@@ -60,7 +60,7 @@ spec = describe "Business.Add" $ do
   it "adds to a specific section (test-suite)" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "hspec"
+            { aoPackageNames = ["hspec"]
             , aoVersion = Just ">=2.8"
             , aoSection = TargetNamed "my-test"
             , aoDev = True
@@ -80,7 +80,7 @@ spec = describe "Business.Add" $ do
   it "fails gracefully if section not found" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "hspec"
+            { aoPackageNames = ["hspec"]
             , aoVersion = Just ">=2.8"
             , aoSection = TargetNamed "non-existent-section"
             , aoDev = True
@@ -96,7 +96,7 @@ spec = describe "Business.Add" $ do
   it "updates existing dependency version instead of duplicating" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "text"
+            { aoPackageNames = ["text"]
             , aoVersion = Just "==1.2.4.1"
             , aoSection = TargetLib
             , aoDev = False
@@ -118,7 +118,7 @@ spec = describe "Business.Add" $ do
   it "uses ^>= constraint by default when no version is specified" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "aeson"
+            { aoPackageNames = ["aeson"]
             , aoVersion = Nothing
             , aoSection = TargetLib
             , aoDev = False
@@ -134,6 +134,26 @@ spec = describe "Business.Add" $ do
       content <- TIO.readFile path
       -- Check for ^>= and some version number
       content `shouldSatisfy` T.isInfixOf "aeson ^>="
+
+  it "adds multiple packages in a single command" $ do
+    withTempCabalFile basicCabalFile $ \path -> do
+      let opts = AddOptions 
+            { aoPackageNames = ["bytestring", "vector"]
+            , aoVersion = Nothing
+            , aoSection = TargetLib
+            , aoDev = False
+            , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
+            }
+      
+      result <- addDependency opts path
+      result `shouldSatisfy` isSuccess
+      
+      content <- TIO.readFile path
+      T.unpack content `shouldContain` "bytestring ^>="
+      T.unpack content `shouldContain` "vector ^>="
 
 basicCabalFile :: Text
 basicCabalFile = T.unlines

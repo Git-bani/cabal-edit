@@ -18,7 +18,7 @@ spec = describe "Common Stanza Support" $ do
   it "adds a dependency to a common stanza" $ do
     withTempCabalFile commonCabal $ \path -> do
       let opts = AddOptions 
-            { aoPackageName = "aeson"
+            { aoPackageNames = ["aeson"]
             , aoVersion = Nothing
             , aoSection = TargetNamed "shared-props" -- Matches 'common shared-props'
             , aoDev = False

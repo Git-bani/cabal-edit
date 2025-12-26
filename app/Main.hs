@@ -69,8 +69,7 @@ commandParser = subparser
 addParser :: Parser Command
 addParser = AddCmd <$>
   ( AddOptions
-  <$> (T.pack <$> argument str (metavar "PACKAGE"))
-  <*> optional (strOption
+  <$> optional (strOption
       ( long "version"
       <> short 'V'
       <> metavar "VERSION"
@@ -100,13 +99,13 @@ addParser = AddCmd <$>
       ( long "path"
       <> metavar "PATH"
       <> help "Local path" ))
+  <*> some (T.pack <$> argument str (metavar "PACKAGE"))
   )
 
 removeParser :: Parser Command
 removeParser = RemoveCmd <$>
   ( RemoveOptions
-  <$> (T.pack <$> argument str (metavar "PACKAGE"))
-  <*> option sectionTargetReader
+  <$> option sectionTargetReader
       ( long "section"
       <> short 's'
       <> metavar "SECTION"
@@ -115,15 +114,16 @@ removeParser = RemoveCmd <$>
   <*> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> some (T.pack <$> argument str (metavar "PACKAGE"))
   )
 
 upgradeParser :: Parser Command
 upgradeParser = UpgradeCmd <$>
   ( UpgradeOptions
-  <$> optional (T.pack <$> argument str (metavar "PACKAGE"))
-  <*> switch
+  <$> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> many (T.pack <$> argument str (metavar "PACKAGE"))
   )
 
 sectionTargetReader :: ReadM SectionTarget
@@ -139,9 +139,11 @@ parseSectionTarget s = case s of
   "test" -> TargetTest Nothing
   "benchmark" -> TargetBench Nothing
   "bench" -> TargetBench Nothing
+  "common" -> TargetCommon Nothing
   _ -> if "exe:" `isPrefixOf` s then TargetExe (Just $ T.pack $ drop 4 s)
        else if "test:" `isPrefixOf` s then TargetTest (Just $ T.pack $ drop 5 s)
        else if "bench:" `isPrefixOf` s then TargetBench (Just $ T.pack $ drop 6 s)
+       else if "common:" `isPrefixOf` s then TargetCommon (Just $ T.pack $ drop 7 s)
        else TargetNamed (T.pack s)
 
 -- Execute parsed command
@@ -196,9 +198,11 @@ runOn path cmd = do
     UpgradeCmd opts -> upgradeDependencies opts path
 
 describeAction :: Command -> Text
-describeAction (AddCmd opts) = "Adding " <> aoPackageName opts
-describeAction (RemoveCmd opts) = "Removing " <> roPackageName opts
-describeAction (UpgradeCmd _) = "Upgrading dependencies"
+describeAction (AddCmd opts) = "Adding " <> T.intercalate ", " (aoPackageNames opts)
+describeAction (RemoveCmd opts) = "Removing " <> T.intercalate ", " (roPackageNames opts)
+describeAction (UpgradeCmd opts) = 
+  if null (uoPackageNames opts) then "Upgrading all dependencies"
+  else "Upgrading " <> T.intercalate ", " (uoPackageNames opts)
 
 -- Find .cabal file in current directory
 findCabalFile :: IO (Maybe FilePath)

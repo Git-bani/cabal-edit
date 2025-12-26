@@ -26,7 +26,7 @@ spec = do
         let run args = callProcess exePath args
         
         -- 1. Add 'aeson' dependency
-        run ["add", "aeson", "--version", "==2.0.0.0"]
+        run ["add", "--version", "==2.0.0.0", "aeson"]
         
         contentAfterAdd <- TIO.readFile cabalFile
         T.unpack contentAfterAdd `shouldContain` "aeson ==2.0.0.0"
@@ -36,6 +36,26 @@ spec = do
         
         contentAfterRm <- TIO.readFile cabalFile
         T.unpack contentAfterRm `shouldNotContain` "aeson"
+        -- Ensure other deps remain
+        T.unpack contentAfterRm `shouldContain` "base >=4.14"
+
+    it "Workflow: Add -> Remove multiple dependencies" $ do
+      withTempProject basicCabalFile $ \_ cabalFile -> do
+        let run args = callProcess exePath args
+        
+        -- 1. Add multiple dependencies
+        run ["add", "--version", ">=2.0", "aeson", "bytestring"]
+        
+        contentAfterAdd <- TIO.readFile cabalFile
+        T.unpack contentAfterAdd `shouldContain` "aeson >=2.0"
+        T.unpack contentAfterAdd `shouldContain` "bytestring >=2.0"
+        
+        -- 2. Remove multiple dependencies
+        run ["rm", "aeson", "bytestring"]
+        
+        contentAfterRm <- TIO.readFile cabalFile
+        T.unpack contentAfterRm `shouldNotContain` "aeson"
+        T.unpack contentAfterRm `shouldNotContain` "bytestring"
         -- Ensure other deps remain
         T.unpack contentAfterRm `shouldContain` "base >=4.14"
 

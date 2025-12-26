@@ -18,7 +18,7 @@ spec = describe "Business.Remove" $ do
   it "removes an existing dependency from library" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = RemoveOptions 
-            { roPackageName = "text"
+            { roPackageNames = ["text"]
             , roSection = TargetLib
             , roDryRun = False
             }
@@ -33,7 +33,7 @@ spec = describe "Business.Remove" $ do
   it "fails if dependency does not exist" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = RemoveOptions 
-            { roPackageName = "non-existent-pkg"
+            { roPackageNames = ["non-existent-pkg"]
             , roSection = TargetLib
             , roDryRun = False
             }
@@ -47,8 +47,8 @@ spec = describe "Business.Remove" $ do
   it "removes from a specific section (test-suite)" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = RemoveOptions 
-            { roPackageName = "base"
-            , roSection = TargetNamed "my-test"
+            { roPackageNames = ["hspec"]
+            , roSection = TargetTest (Just "my-test")
             , roDryRun = False
             }
       
@@ -56,26 +56,30 @@ spec = describe "Business.Remove" $ do
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path
-      -- Check that base is gone from test suite but remains in library?
-      -- Wait, "base" is common. 
-      -- My regex/contains check is too simple to distinguish sections easily without parsing.
-      -- But "base" is in both. If I remove from test, it should still be in library.
-      
-      -- Let's rely on the fact that if it worked, the file is valid and base is removed from that section.
-      -- A robust check would parse it again.
-      -- For now, simple check: "base" should appear at least once (for library).
-      T.unpack content `shouldContain` "base" 
-      
-      -- Hard to verify specific section removal with simple string search without context.
-      -- Maybe I should use a unique dependency for the test case.
-      -- "hspec" is in test suite in my example below.
-      return ()
+      T.unpack content `shouldNotContain` "hspec"
 
-  it "removes unique dependency from test suite" $ do
+  it "removes multiple packages in a single command" $ do
     withTempCabalFile basicCabalFile $ \path -> do
       let opts = RemoveOptions 
-            { roPackageName = "hspec"
-            , roSection = TargetNamed "my-test"
+            { roPackageNames = ["base", "text"]
+            , roSection = TargetLib
+            , roDryRun = False
+            }
+      
+      result <- removeDependency opts path
+      result `shouldSatisfy` isSuccess
+      
+      content <- TIO.readFile path
+      T.unpack content `shouldNotContain` "base"
+      T.unpack content `shouldNotContain` "text"
+
+  it "automatically detects and removes dependency from non-default section" $ do
+    withTempCabalFile basicCabalFile $ \path -> do
+      -- 'hspec' is ONLY in my-test suite.
+      -- If we use default section (TargetLib), it should find it in my-test.
+      let opts = RemoveOptions 
+            { roPackageNames = ["hspec"]
+            , roSection = TargetLib
             , roDryRun = False
             }
       

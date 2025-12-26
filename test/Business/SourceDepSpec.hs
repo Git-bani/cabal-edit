@@ -18,7 +18,7 @@ spec = describe "Business.SourceDep" $ do
   it "adds a git dependency to cabal.project and .cabal" $ do
     withTempEnv basicCabalFile $ \_dir cabalPath projPath -> do
       let opts = AddOptions 
-            { aoPackageName = "foo"
+            { aoPackageNames = ["foo"]
             , aoVersion = Nothing
             , aoSection = TargetLib
             , aoDev = False
@@ -56,7 +56,7 @@ spec = describe "Business.SourceDep" $ do
   it "adds a local path dependency to cabal.project and .cabal" $ do
     withTempEnv basicCabalFile $ \_dir cabalPath projPath -> do
       let opts = AddOptions 
-            { aoPackageName = "bar"
+            { aoPackageNames = ["bar"]
             , aoVersion = Nothing
             , aoSection = TargetLib
             , aoDev = False
