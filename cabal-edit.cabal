@@ -38,6 +38,7 @@ library cabal-edit-internal
                     , Business.Add
                     , Business.Remove
                     , Business.Upgrade
+                    , Business.SetVersion
                     , Business.Validation
                     , External.Hackage
                     , External.Network
@@ -95,6 +96,7 @@ test-suite cabal-edit-test
                     , Business.AddSpec
                     , Business.RemoveSpec
                     , Business.ValidationSpec
+                    , Business.SetVersionSpec
                     , Business.SubLibrarySpec
                     , Business.SourceDepSpec
                     , Business.CommonStanzaSpec

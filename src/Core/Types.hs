@@ -32,6 +32,7 @@ module Core.Types
   , AddOptions(..)
   , RemoveOptions(..)
   , UpgradeOptions(..)
+  , SetVersionOptions(..)
   
     -- * Results
   , Result(..)
@@ -91,6 +92,7 @@ data SectionTarget
   | TargetBench (Maybe Text)
   | TargetCommon (Maybe Text)
   | TargetNamed Text        -- Specific name, type unknown (legacy/fuzzy match)
+  | TargetConditional SectionTarget Text -- Target a specific 'if' block inside a section
   deriving (Show, Eq)
 
 -- Represents a parsed Cabal file with structure preservation
@@ -189,7 +191,13 @@ data Command
   = AddCmd AddOptions
   | RemoveCmd RemoveOptions
   | UpgradeCmd UpgradeOptions
+  | SetVersionCmd SetVersionOptions
   deriving (Show, Eq)
+
+data SetVersionOptions = SetVersionOptions
+  { svoVersion :: Text
+  , svoDryRun :: Bool
+  } deriving (Show, Eq)
 
 data AddOptions = AddOptions
   { aoVersion :: Maybe Text

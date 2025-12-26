@@ -5,7 +5,10 @@ module Core.Parser
   , findDependencies
   , findSection
   , findSectionPosition
+  , findConditionalPosition
   , getSectionBounds
+  , resolveTargetBounds
+  , describeSection
   ) where
 
 import Core.Types
@@ -233,6 +236,81 @@ cabalDepToInternal (CabalDep.Dependency pkgName versionRange _) =
 
 versionRangeToConstraint :: VR.VersionRange -> VersionConstraint
 versionRangeToConstraint vr = CabalVersionRange vr
+
+-- | Resolve bounds for a section or a conditional block
+resolveTargetBounds :: SectionTarget -> CabalFile -> Text -> Either Error (Int, Int, Text, Text) -- (Start, End, Prefix, Suffix)
+resolveTargetBounds target cabalFile currentContent =
+  case target of
+    TargetConditional base condition ->
+      case findSection base cabalFile of
+        Nothing -> Left $ Error "Base section not found" FileNotFound
+        Just sec ->
+          let secHeader = describeSection sec
+              TextSpan (TextOffset sStart) (TextOffset sEnd) = findSectionPosition secHeader currentContent
+              secContent = T.take (sEnd - sStart) (T.drop sStart currentContent)
+              TextSpan (TextOffset cStart) (TextOffset cEnd) = findConditionalPosition condition secContent
+          in if cStart == 0 && cEnd == 0
+             then 
+               -- Block not found, create it at the end of the section
+               let bIndent = detectBaseIndent' secContent
+                   -- Ensure section content ends with a newline before appending
+                   prefixStr = if T.null secContent || T.last secContent == '\n' then "" else "\n"
+                   newBlock = prefixStr <> "\n" <> T.replicate bIndent " " <> "if " <> condition <> "\n"
+               in Right (sEnd, sEnd, newBlock, "")
+             else
+               Right (sStart + cStart, sStart + cEnd, "", "")
+    
+    other ->
+      case findSection other cabalFile of
+        Nothing -> Left $ Error "Section not found" FileNotFound
+        Just sec ->
+          let secHeader = describeSection sec
+              TextSpan (TextOffset start) (TextOffset end) = findSectionPosition secHeader currentContent
+          in Right (start, end, "", "")
+
+-- | Helper to find base indent of a section
+detectBaseIndent' :: Text -> Int
+detectBaseIndent' content =
+  let ls = T.lines content
+      fieldLines = filter (T.isInfixOf ":") $ filter (not . T.null . T.strip) ls
+  in case fieldLines of
+       (l:_) -> T.length $ T.takeWhile (== ' ') l
+       [] -> 4
+
+describeSection :: Section -> Text
+describeSection (LibrarySection lib) = case libName lib of
+  Nothing -> "library"
+  Just n -> "library " <> n
+describeSection (ExecutableSection exe) = "executable " <> exeName exe
+describeSection (TestSuiteSection test) = "test-suite " <> testName test
+describeSection (BenchmarkSection bench) = "benchmark " <> benchName bench
+describeSection (CommonStanzaSection common) = "common " <> commonName common
+describeSection (UnknownSection name _) = name
+
+-- | Find position of an 'if' block within section content
+findConditionalPosition :: Text -> Text -> TextSpan
+findConditionalPosition condition sectionText =
+  let target = "if " <> condition
+      targetLower = T.toLower target
+      ls = zip [0..] $ T.lines sectionText
+      match = find (\(_, l) -> targetLower `T.isInfixOf` T.toLower l) ls
+  in case match of
+       Nothing -> TextSpan 0 0
+       Just (lineIdx, line) ->
+         let startOffset = T.length $ T.unlines $ map snd $ take lineIdx ls
+             -- Include the newline if not first line
+             actualStart = if startOffset == 0 then 0 else startOffset + 1
+             
+             -- Find block end
+             indent = T.length $ T.takeWhile (== ' ') line
+             restLines = map snd $ drop (lineIdx + 1) ls
+             (body, _) = span (\l -> T.null (T.strip l) || T.length (T.takeWhile (== ' ') l) > indent) restLines
+             
+             headerLen = T.length line + 1
+             bodyLen = sum $ map ((+1) . T.length) body
+             
+             endOffset = actualStart + headerLen + bodyLen
+         in TextSpan (TextOffset actualStart) (TextOffset endOffset)
 
 -- Find position of section in raw text
 -- Returns TextSpan

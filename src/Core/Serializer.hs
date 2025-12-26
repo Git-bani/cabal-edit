@@ -10,6 +10,7 @@ module Core.Serializer
   , removeDependencyLine
   , updateDependencyLine
   , replaceBuildDependsBlock
+  , detectIndentation
   )
 where
 

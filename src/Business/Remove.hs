@@ -59,7 +59,7 @@ processPackageRemove opts eol leadingComma cabalFile (Success currentContent) pk
             other -> [other]
             
       -- Apply removal to all targets
-      let result = foldl (applyRemoval pkgName dep eol leadingComma) (Success currentContent) targets
+      let result = foldl (applyRemoval pkgName dep eol leadingComma cabalFile) (Success currentContent) targets
       
       -- If nothing was removed (content same as before), and we didn't already have a failure, return error
       case result of
@@ -80,33 +80,17 @@ sectionToTarget (BenchmarkSection bench) = TargetBench (Just $ benchName bench)
 sectionToTarget (CommonStanzaSection common) = TargetNamed (commonName common)
 sectionToTarget (UnknownSection name _) = TargetNamed name
 
-applyRemoval :: PackageName -> Dependency -> Text -> Bool -> Result Text -> SectionTarget -> Result Text
-applyRemoval _ _ _ _ (Failure err) _ = Failure err
-applyRemoval pkgName dep eol leadingComma (Success content) target =
-  -- We need to find the section position in the CURRENT content
-  -- Use a helper to find section start by target name
-  let secHeader = targetToHeader target
-      TextSpan (TextOffset start) (TextOffset end) = findSectionPosition secHeader content
-  in if start == 0 && end == 0
-     then Failure $ Error ("Section not found: " <> secHeader) FileNotFound
-     else
+applyRemoval :: PackageName -> Dependency -> Text -> Bool -> CabalFile -> Result Text -> SectionTarget -> Result Text
+applyRemoval _ _ _ _ _ (Failure err) _ = Failure err
+applyRemoval pkgName dep eol leadingComma cabalFile (Success content) target =
+  case resolveTargetBounds target cabalFile content of
+    Left err -> Failure err
+    Right (start, end, _, _) ->
        let (before, rest) = T.splitAt start content
            (sectionContent, after) = T.splitAt (end - start) rest
        in if not (unPackageName pkgName `T.isInfixOf` sectionContent)
           then Success content -- Skip if not in this section
           else Success $ before <> removeDependencyLine eol leadingComma dep sectionContent <> after
-
-targetToHeader :: SectionTarget -> Text
-targetToHeader TargetLib = "library"
-targetToHeader (TargetExe Nothing) = "executable"
-targetToHeader (TargetExe (Just n)) = "executable " <> n
-targetToHeader (TargetTest Nothing) = "test-suite"
-targetToHeader (TargetTest (Just n)) = "test-suite " <> n
-targetToHeader (TargetBench Nothing) = "benchmark"
-targetToHeader (TargetBench (Just n)) = "benchmark " <> n
-targetToHeader (TargetCommon Nothing) = "common"
-targetToHeader (TargetCommon (Just n)) = "common " <> n
-targetToHeader (TargetNamed n) = n
 
 -- ... keep helper describeSection if needed or reuse ...
 

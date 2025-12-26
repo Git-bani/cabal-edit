@@ -7,6 +7,7 @@ import Options.Applicative hiding (Success, Failure)
 import Business.Add
 import Business.Remove
 import Business.Upgrade
+import Business.SetVersion
 import Core.Types
 import Core.ProjectContext
 import Utils.Logging
@@ -70,6 +71,16 @@ commandParser = subparser
   ( command "add" (info addParser (progDesc "Add a dependency"))
   <> command "rm" (info removeParser (progDesc "Remove a dependency"))
   <> command "upgrade" (info upgradeParser (progDesc "Upgrade dependencies"))
+  <> command "set-version" (info setVersionParser (progDesc "Set package version"))
+  )
+
+setVersionParser :: Parser Command
+setVersionParser = SetVersionCmd <$>
+  ( SetVersionOptions
+  <$> (T.pack <$> argument str (metavar "VERSION"))
+  <*> switch
+      ( long "dry-run"
+      <> help "Don't write changes" )
   )
 
 addParser :: Parser Command
@@ -136,21 +147,29 @@ sectionTargetReader :: ReadM SectionTarget
 sectionTargetReader = eitherReader $ \s -> Right $ parseSectionTarget s
 
 parseSectionTarget :: String -> SectionTarget
-parseSectionTarget s = case s of
-  "library" -> TargetLib
-  "lib" -> TargetLib
-  "executable" -> TargetExe Nothing
-  "exe" -> TargetExe Nothing
-  "test-suite" -> TargetTest Nothing
-  "test" -> TargetTest Nothing
-  "benchmark" -> TargetBench Nothing
-  "bench" -> TargetBench Nothing
-  "common" -> TargetCommon Nothing
-  _ -> if "exe:" `isPrefixOf` s then TargetExe (Just $ T.pack $ drop 4 s)
-       else if "test:" `isPrefixOf` s then TargetTest (Just $ T.pack $ drop 5 s)
-       else if "bench:" `isPrefixOf` s then TargetBench (Just $ T.pack $ drop 6 s)
-       else if "common:" `isPrefixOf` s then TargetCommon (Just $ T.pack $ drop 7 s)
-       else TargetNamed (T.pack s)
+parseSectionTarget s = 
+  let t = T.pack s
+  in if ":if:" `T.isInfixOf` t
+     then 
+       let (base, condPart) = T.breakOn ":if:" t
+           cond = T.drop 4 condPart
+           baseTarget = parseSectionTarget (T.unpack base)
+       in TargetConditional baseTarget cond
+     else case s of
+       "library" -> TargetLib
+       "lib" -> TargetLib
+       "executable" -> TargetExe Nothing
+       "exe" -> TargetExe Nothing
+       "test-suite" -> TargetTest Nothing
+       "test" -> TargetTest Nothing
+       "benchmark" -> TargetBench Nothing
+       "bench" -> TargetBench Nothing
+       "common" -> TargetCommon Nothing
+       _ -> if "exe:" `isPrefixOf` s then TargetExe (Just $ T.pack $ drop 4 s)
+            else if "test:" `isPrefixOf` s then TargetTest (Just $ T.pack $ drop 5 s)
+            else if "bench:" `isPrefixOf` s then TargetBench (Just $ T.pack $ drop 6 s)
+            else if "common:" `isPrefixOf` s then TargetCommon (Just $ T.pack $ drop 7 s)
+            else TargetNamed (T.pack s)
 
 -- Execute parsed command
 executeCommand :: CLI -> IO (Result ())
@@ -213,6 +232,7 @@ runOn maybeCtx path cmd = do
     AddCmd opts -> addDependency maybeCtx opts path
     RemoveCmd opts -> removeDependency opts path
     UpgradeCmd opts -> upgradeDependencies opts path
+    SetVersionCmd opts -> setVersion opts path
 
 describeAction :: Command -> Text
 describeAction (AddCmd opts) = "Adding " <> T.intercalate ", " (aoPackageNames opts)
@@ -220,6 +240,7 @@ describeAction (RemoveCmd opts) = "Removing " <> T.intercalate ", " (roPackageNa
 describeAction (UpgradeCmd opts) = 
   if null (uoPackageNames opts) then "Upgrading all dependencies"
   else "Upgrading " <> T.intercalate ", " (uoPackageNames opts)
+describeAction (SetVersionCmd opts) = "Setting version to " <> svoVersion opts
 
 -- Find .cabal file in current directory
 findCabalFile :: IO (Maybe FilePath)

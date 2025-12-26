@@ -4,7 +4,7 @@ module Business.Add (addDependency) where
 
 import Core.Types
 import Core.Parser
-import Core.Serializer
+import Core.Serializer (insertDependencyLine, updateDependencyLine, detectIndentation)
 import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
@@ -70,9 +70,11 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
           -- If we edit one section, other sections' positions might change.
           -- Strategy: Always use `cabalFile` to find section names, but use a fresh search in `currentContent`.
           
-          case findSection (aoSection opts) cabalFile of
-            Nothing -> return $ Failure $ Error "Section not found" FileNotFound
-            Just sec -> do
+          -- Determine target section/block
+          let target = aoSection opts
+          case resolveTargetBounds target cabalFile currentContent of
+            Left err -> return $ Failure err
+            Right (start, end, prefix, suffix) -> do
               -- Create dependency
               let dep = Dependency
                     { depName = pkgName
@@ -80,32 +82,28 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
                     , depType = if aoDev opts then TestDepends else BuildDepends
                     }
               
-              -- We need fresh bounds for the section in the current (possibly modified) content
-              let secHeader = describeSection sec
-              let TextSpan (TextOffset start) (TextOffset end) = findSectionPosition secHeader currentContent
-              
               let (before, rest) = T.splitAt start currentContent
-              let (sectionContent, after) = T.splitAt (end - start) rest
+              let actualSectionContent = if T.null prefix 
+                                         then T.take (end - start) rest
+                                         else 
+                                           -- Creating new block.
+                                           -- We need to know the base indent.
+                                           let bIndent = detectIndentation currentContent
+                                               indentStr = T.replicate (bIndent + 4) " "
+                                           in indentStr <> "build-depends: "
+              
+              let after = if T.null prefix then T.drop (end - start) rest else rest
               
               -- Check if dependency exists in THIS section
-              -- (Ideally we'd parse sectionContent to get deps, but for now we can check raw text or rely on findDependencies from original sec)
-              let alreadyExists = unPackageName pkgName `T.isInfixOf` sectionContent -- simple check
+              let alreadyExists = if T.null prefix 
+                                  then unPackageName pkgName `T.isInfixOf` actualSectionContent
+                                  else False
               
               let newSectionContent = if alreadyExists
-                    then updateDependencyLine eol leadingComma dep sectionContent
-                    else insertDependencyLine eol leadingComma dep sectionContent
+                    then updateDependencyLine eol leadingComma dep actualSectionContent
+                    else insertDependencyLine eol leadingComma dep actualSectionContent
                     
-              return $ Success $ before <> newSectionContent <> after
-
-describeSection :: Section -> Text
-describeSection (LibrarySection lib) = case libName lib of
-  Nothing -> "library"
-  Just n -> "library " <> n
-describeSection (ExecutableSection exe) = "executable " <> exeName exe
-describeSection (TestSuiteSection test) = "test-suite " <> testName test
-describeSection (BenchmarkSection bench) = "benchmark " <> benchName bench
-describeSection (CommonStanzaSection common) = "common " <> commonName common
-describeSection (UnknownSection name _) = name
+              return $ Success $ before <> prefix <> newSectionContent <> suffix <> after
 
 handleSourceDependency :: AddOptions -> IO (Result ())
 handleSourceDependency opts

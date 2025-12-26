@@ -155,6 +155,44 @@ spec = describe "Business.Add" $ do
       T.unpack content `shouldContain` "bytestring ^>="
       T.unpack content `shouldContain` "vector ^>="
 
+  it "adds a dependency to an existing if block" $ do
+    let cabalWithIf = T.unlines
+          [ "cabal-version: 2.4", "name: if-test", "version: 0.1", "library"
+          , "  if os(windows)", "    build-depends: Win32"
+          ]
+    withTempCabalFile cabalWithIf $ \path -> do
+      let opts = AddOptions 
+            { aoPackageNames = ["directory"]
+            , aoVersion = Nothing
+            , aoSection = TargetConditional TargetLib "os(windows)"
+            , aoDev = False
+            , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
+            }
+      _ <- addDependency Nothing opts path
+      content <- TIO.readFile path
+      T.unpack content `shouldContain` "Win32"
+      T.unpack content `shouldContain` "directory"
+
+  it "creates a new if block if it doesn't exist" $ do
+    withTempCabalFile basicCabalFile $ \path -> do
+      let opts = AddOptions 
+            { aoPackageNames = ["unix"]
+            , aoVersion = Nothing
+            , aoSection = TargetConditional TargetLib "os(linux)"
+            , aoDev = False
+            , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
+            }
+      _ <- addDependency Nothing opts path
+      content <- TIO.readFile path
+      T.unpack content `shouldContain` "if os(linux)"
+      T.unpack content `shouldContain` "unix"
+
 basicCabalFile :: Text
 basicCabalFile = T.unlines
   [ "cabal-version:      2.4"
