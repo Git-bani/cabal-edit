@@ -23,6 +23,9 @@ spec = describe "Business.Add" $ do
             , aoSection = TargetLib -- defaults to library
             , aoDev = False
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       result <- addDependency opts path
@@ -43,6 +46,9 @@ spec = describe "Business.Add" $ do
             , aoSection = TargetLib
             , aoDev = False
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       _ <- addDependency opts path
@@ -59,6 +65,9 @@ spec = describe "Business.Add" $ do
             , aoSection = TargetNamed "my-test"
             , aoDev = True
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       result <- addDependency opts path
@@ -76,6 +85,9 @@ spec = describe "Business.Add" $ do
             , aoSection = TargetNamed "non-existent-section"
             , aoDev = True
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       result <- addDependency opts path
@@ -89,6 +101,9 @@ spec = describe "Business.Add" $ do
             , aoSection = TargetLib
             , aoDev = False
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       result <- addDependency opts path
@@ -99,6 +114,26 @@ spec = describe "Business.Add" $ do
       T.unpack content `shouldContain` "text ==1.2.4.1"
       -- Should NOT have duplicate 'text' (appears once in original, should appear once in result)
       T.count "text" content `shouldBe` 1
+
+  it "uses ^>= constraint by default when no version is specified" $ do
+    withTempCabalFile basicCabalFile $ \path -> do
+      let opts = AddOptions 
+            { aoPackageName = "aeson"
+            , aoVersion = Nothing
+            , aoSection = TargetLib
+            , aoDev = False
+            , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
+            }
+      
+      result <- addDependency opts path
+      result `shouldSatisfy` isSuccess
+      
+      content <- TIO.readFile path
+      -- Check for ^>= and some version number
+      content `shouldSatisfy` T.isInfixOf "aeson ^>="
 
 basicCabalFile :: Text
 basicCabalFile = T.unlines

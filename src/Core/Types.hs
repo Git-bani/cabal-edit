@@ -149,6 +149,7 @@ data DependencyType = BuildDepends | TestDepends | BenchmarkDepends
 data VersionConstraint
   = AnyVersion
   | ExactVersion Version
+  | MajorBoundVersion Version
   | RangeVersion VersionRange
   | UnparsedVersion Text
   | CabalVersionRange VR.VersionRange
@@ -185,6 +186,9 @@ data AddOptions = AddOptions
   , aoSection :: SectionTarget
   , aoDev :: Bool
   , aoDryRun :: Bool
+  , aoGit :: Maybe Text
+  , aoTag :: Maybe Text
+  , aoPath :: Maybe Text
   } deriving (Show, Eq)
 
 data RemoveOptions = RemoveOptions

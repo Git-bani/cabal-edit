@@ -33,4 +33,9 @@ spec = describe "Core.DependencyResolver" $ do
         Failure (Error _ InvalidDependency) -> return ()
         _ -> expectationFailure $ "Should have rejected 'foo', got: " ++ show result2
 
-    -- Note: The Nothing case hits the network, skipping here.
+    it "returns MajorBoundVersion (^>=) when no version is provided" $ do
+      -- This hits the network/cache
+      result <- resolveVersionConstraint (unsafeMkPackageName "aeson") Nothing
+      case result of
+        Success (MajorBoundVersion _) -> return ()
+        _ -> expectationFailure $ "Should have returned MajorBoundVersion, got: " ++ show result

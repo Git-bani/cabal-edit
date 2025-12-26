@@ -23,6 +23,9 @@ spec = describe "Sub-library Support" $ do
             , aoSection = TargetNamed "sublib"
             , aoDev = False
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       result <- addDependency opts path
@@ -42,6 +45,9 @@ spec = describe "Sub-library Support" $ do
             , aoSection = TargetLib
             , aoDev = False
             , aoDryRun = False
+            , aoGit = Nothing
+            , aoTag = Nothing
+            , aoPath = Nothing
             }
       
       result <- addDependency opts path

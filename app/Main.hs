@@ -88,6 +88,18 @@ addParser = AddCmd <$>
   <*> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> optional (strOption
+      ( long "git"
+      <> metavar "URL"
+      <> help "Git repository URL" ))
+  <*> optional (strOption
+      ( long "tag"
+      <> metavar "TAG"
+      <> help "Git tag/branch/commit" ))
+  <*> optional (strOption
+      ( long "path"
+      <> metavar "PATH"
+      <> help "Local path" ))
   )
 
 removeParser :: Parser Command

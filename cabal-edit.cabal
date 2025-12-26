@@ -33,6 +33,7 @@ library cabal-edit-internal
                     , Core.Serializer
                     , Core.DependencyResolver
                     , Core.ProjectContext
+                    , Core.ProjectEditor
                     , Core.Safety
                     , Business.Add
                     , Business.Remove
@@ -95,6 +96,7 @@ test-suite cabal-edit-test
                     , Business.RemoveSpec
                     , Business.ValidationSpec
                     , Business.SubLibrarySpec
+                    , Business.SourceDepSpec
                     , Core.ProjectContextSpec
                     , Integration.EndToEndSpec
                     , Utils.ConfigSpec

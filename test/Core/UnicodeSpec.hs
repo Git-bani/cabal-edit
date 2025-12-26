@@ -29,7 +29,7 @@ spec = describe "Core.Unicode" $ do
           ]
     
     withTempCabalFile unicodeContent $ \path -> do
-      let opts = AddOptions "text" Nothing TargetLib False False
+      let opts = AddOptions "text" Nothing TargetLib False False Nothing Nothing Nothing
       result <- addDependency opts path
       
       case result of

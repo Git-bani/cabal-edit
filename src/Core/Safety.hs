@@ -3,6 +3,7 @@
 module Core.Safety
   ( withSafeWrite
   , safeWriteCabal
+  , safeWriteFile
   , verifyCabalContent
   , createBackup
   ) where
@@ -65,21 +66,26 @@ withSafeWrite path originalContent _ = do
 -- | Better signature for the safety wrapper
 safeWriteCabal :: FilePath -> Text -> IO (Result ())
 safeWriteCabal path newContent = do
-   withFileLock path $ do
+   case verifyCabalContent newContent of
+     Left err -> return $ Failure $ Error ("Verification failed: " <> err) ParseError
+     Right _ -> safeWriteFile path newContent
+
+-- | Generic safe write (atomic + backup + locking) without Cabal verification
+safeWriteFile :: FilePath -> Text -> IO (Result ())
+safeWriteFile path newContent = do
+  withFileLock path $ do
      createBackup path
-     logDebug "Verifying new content..."
-     case verifyCabalContent newContent of
-       Left err -> return $ Failure $ Error ("Verification failed: " <> err) ParseError
-       Right _ -> do
-         let tempPath = path <.> "tmp"
-         logDebug $ "Writing to temporary file: " <> T.pack tempPath
-         
-         let writeAction = do
-               BS.writeFile tempPath (encodeUtf8 newContent)
-               renameFile tempPath path
-               return $ Success ()
-               
-         writeAction `onException` (ignoringIOErrors $ removeFile tempPath)
+     logDebug $ "Writing to file: " <> T.pack path
+     
+     let tempPath = path <.> "tmp"
+     logDebug $ "Writing to temporary file: " <> T.pack tempPath
+     
+     let writeAction = do
+           BS.writeFile tempPath (encodeUtf8 newContent)
+           renameFile tempPath path
+           return $ Success ()
+           
+     writeAction `onException` (ignoringIOErrors $ removeFile tempPath)
 
 -- | Create a backup file
 createBackup :: FilePath -> IO ()

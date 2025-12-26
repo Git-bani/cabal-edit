@@ -23,7 +23,7 @@ resolveVersionConstraint :: PackageName -> Maybe Text -> IO (Result VersionConst
 resolveVersionConstraint pkgName Nothing = do
   res <- resolveLatestVersion pkgName
   case res of
-    Success v -> return $ Success (ExactVersion v)
+    Success v -> return $ Success (MajorBoundVersion v)
     Failure e -> return $ Failure e
 
 resolveVersionConstraint _ (Just constraint) = do

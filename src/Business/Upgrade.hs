@@ -97,10 +97,9 @@ upgradeDependency dep = do
   case res of
     Failure err -> return $ Failure err
     Success ver -> do
-      -- Create new dependency with ExactVersion
-      let newConstraint = ExactVersion ver
+      -- Create new dependency with MajorBoundVersion (^>=)
+      let newConstraint = MajorBoundVersion ver
       -- Check if it's different from current
-      -- (Simplified check, ideally we check if current satisfies latest, but 'upgrade' usually forces latest)
       return $ Success $ dep { depVersionConstraint = Just newConstraint }
 
 mergeDependencies :: [Dependency] -> [Dependency] -> [Dependency]
