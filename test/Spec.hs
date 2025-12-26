@@ -20,6 +20,7 @@ import qualified Core.TrailingCommaSpec
 import qualified Core.UnicodeSpec
 import qualified Golden.RoundtripSpec
 import qualified Integration.EndToEndSpec
+import qualified Integration.WorkspaceSpec
 import qualified Utils.ConfigSpec
 
 main :: IO ()
@@ -42,4 +43,5 @@ main = hspec $ do
   describe "Core.Unicode" Core.UnicodeSpec.spec
   describe "Golden.Roundtrip" Golden.RoundtripSpec.spec
   describe "Integration.EndToEnd" Integration.EndToEndSpec.spec
+  describe "Integration.Workspace" Integration.WorkspaceSpec.spec
   describe "Utils.Config" Utils.ConfigSpec.spec

@@ -8,6 +8,7 @@ import Core.Serializer
 import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
+import Core.ProjectContext (ProjectContext)
 import Utils.Logging (logInfo)
 import Utils.Config (loadConfig, Config(..))
 import Data.Text (Text)
@@ -15,8 +16,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 
-addDependency :: AddOptions -> FilePath -> IO (Result ())
-addDependency opts path = do
+addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Result ())
+addDependency maybeCtx opts path = do
   cfg <- loadConfig
   let leadingComma = cfgLeadingComma cfg
   
@@ -34,7 +35,7 @@ addDependency opts path = do
           let eol = cfLineEndings cabalFile
           let initialContent = cfRawContent cabalFile
           
-          finalContentResult <- foldM (processPackage opts eol leadingComma cabalFile) (Success initialContent) (aoPackageNames opts)
+          finalContentResult <- foldM (processPackage maybeCtx opts eol leadingComma cabalFile) (Success initialContent) (aoPackageNames opts)
           
           case finalContentResult of
             Failure err -> return $ Failure err
@@ -46,9 +47,9 @@ addDependency opts path = do
                   return $ Success ()
                 else safeWriteCabal path finalContent
 
-processPackage :: AddOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
-processPackage _ _ _ _ (Failure err) _ = return $ Failure err
-processPackage opts eol leadingComma cabalFile (Success currentContent) pkgNameText = do
+processPackage :: Maybe ProjectContext -> AddOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
+processPackage _ _ _ _ _ (Failure err) _ = return $ Failure err
+processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
     Left err -> return $ Failure $ Error err InvalidDependency
     Right pkgName -> do
@@ -56,7 +57,7 @@ processPackage opts eol leadingComma cabalFile (Success currentContent) pkgNameT
       let isSourceDep = isJust (aoGit opts) || isJust (aoPath opts)
       constraintResult <- if isSourceDep && isNothing (aoVersion opts)
                           then return $ Success AnyVersion
-                          else resolveVersionConstraint pkgName (aoVersion opts)
+                          else resolveVersionConstraint maybeCtx pkgName (aoVersion opts)
       
       case constraintResult of
         Failure err -> return $ Failure err

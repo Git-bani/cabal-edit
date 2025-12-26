@@ -33,7 +33,7 @@ spec = describe "Golden Roundtrip" $ do
                           , aoTag = Nothing
                           , aoPath = Nothing
                           }        
-        resAdd <- addDependency addOpts path
+        resAdd <- addDependency Nothing addOpts path
         resAdd `shouldSatisfy` isSuccess
         
         -- 2. Remove the same dependency

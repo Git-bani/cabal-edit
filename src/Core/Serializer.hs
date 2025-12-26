@@ -422,6 +422,7 @@ formatVersionConstraint (Just (ExactVersion ver)) =
   " ==" <> formatVersion ver
 formatVersionConstraint (Just (MajorBoundVersion ver)) =
   " ^>=" <> formatVersion ver
+formatVersionConstraint (Just WorkspaceVersion) = ""
 formatVersionConstraint (Just (RangeVersion range)) =
   " " <> formatVersionRange range
 formatVersionConstraint (Just (UnparsedVersion v)) =

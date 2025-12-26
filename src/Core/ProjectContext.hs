@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Core.ProjectContext
   ( ProjectContext(..)
@@ -11,13 +12,15 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory (doesFileExist, getCurrentDirectory, listDirectory, doesDirectoryExist)
-import System.FilePath ((</>), takeDirectory)
+import System.FilePath ((</>), takeDirectory, takeFileName)
 import Control.Monad (filterM)
-import Data.List (isSuffixOf)
+import Data.List (isSuffixOf, find)
+import Core.Types (PackageName, unsafeMkPackageName)
 
 data ProjectContext = ProjectContext
   { pcRoot :: FilePath
   , pcPackageGlobs :: [String]
+  , pcPackages :: [(PackageName, FilePath)] -- (Name, Path to .cabal file)
   } deriving (Show, Eq)
 
 -- | Find the directory containing cabal.project, traversing upwards
@@ -44,7 +47,24 @@ loadProjectContext root = do
   let projFile = root </> "cabal.project"
   content <- TIO.readFile projFile
   let globs = parseProjectGlobs content
-  return $ ProjectContext root globs
+  let ctxNoPkgs = ProjectContext root globs []
+  paths <- findAllPackageFiles ctxNoPkgs
+  pkgs <- mapM (\p -> (,p) <$> extractPackageNameSimple p) paths
+  return $ ProjectContext root globs pkgs
+
+extractPackageNameSimple :: FilePath -> IO PackageName
+extractPackageNameSimple path = do
+  content <- TIO.readFile path
+  let ls = T.lines content
+      nameLine = find (\l -> "name:" `T.isPrefixOf` T.toLower (T.stripStart l)) ls
+  case nameLine of
+    Just l -> 
+      let (_, val) = T.breakOn ":" l
+      in return $ unsafeMkPackageName $ T.strip $ T.drop 1 val
+    Nothing -> 
+      -- Fallback to filename
+      return $ unsafeMkPackageName $ T.pack $ takeFileName path
+
 
 -- | Robust parser for packages and optional-packages
 parseProjectGlobs :: Text -> [String]

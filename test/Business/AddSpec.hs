@@ -28,7 +28,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       
       result `shouldSatisfy` isSuccess
       
@@ -51,7 +51,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      _ <- addDependency opts path
+      _ <- addDependency Nothing opts path
       content <- TIO.readFile path
       
       T.unpack content `shouldContain` "base >=4.14"
@@ -70,7 +70,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path
@@ -90,7 +90,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       result `shouldSatisfy` isFailure
 
   it "updates existing dependency version instead of duplicating" $ do
@@ -106,7 +106,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path
@@ -128,7 +128,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path
@@ -148,7 +148,7 @@ spec = describe "Business.Add" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path

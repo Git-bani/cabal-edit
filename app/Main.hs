@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main (main) where
 
@@ -45,8 +46,7 @@ cliInfo = info (cliParser <**> helper)
 
 cliParser :: Parser CLI
 cliParser = CLI
-  <$> commandParser
-  <*> switch
+  <$> switch
       ( long "verbose"
       <> short 'v'
       <> help "Enable verbose logging" )
@@ -58,6 +58,12 @@ cliParser = CLI
       ( long "workspace"
       <> short 'w'
       <> help "Apply to all packages in the workspace (cabal.project)" )
+  <*> many (T.pack <$> strOption
+      ( long "package"
+      <> short 'p'
+      <> metavar "PACKAGE"
+      <> help "Target specific package in workspace" ))
+  <*> commandParser
 
 commandParser :: Parser Command
 commandParser = subparser
@@ -148,52 +154,63 @@ parseSectionTarget s = case s of
 
 -- Execute parsed command
 executeCommand :: CLI -> IO (Result ())
-executeCommand (CLI cmd verbose quiet workspace) = do
+executeCommand (CLI verbose quiet workspace packages cmd) = do
   if quiet 
     then setLogLevel Quiet
     else when verbose $ setLogLevel Debug
     
   when verbose $ logDebug "Verbose mode enabled"
   
-  targetFiles <- if workspace
+  targetFilesWithCtx <- if workspace || not (null packages)
     then do
       logInfo "Scanning workspace for projects..."
       root <- findProjectRoot
       case root of
         Nothing -> do
-          logError "No cabal.project found!"
+          if not (null packages)
+            then logError "No cabal.project found, cannot target specific packages!"
+            else logError "No cabal.project found!"
           return []
         Just r -> do
           logDebug $ "Found project root: " <> T.pack r
           ctx <- loadProjectContext r
-          findAllPackageFiles ctx
+          let allPkgs = pcPackages ctx
+          if null packages
+            then return $ map (Just ctx, ) (map snd allPkgs)
+            else 
+              let filtered = filter (\(name, _) -> unPackageName name `elem` packages) allPkgs
+                  foundNames = map (unPackageName . fst) filtered
+                  missing = filter (`notElem` foundNames) packages
+              in do
+                forM_ missing $ \m -> logError $ "Package not found in workspace: " <> m
+                return $ map (Just ctx, ) (map snd filtered)
     else do
       f <- findCabalFile
-      return $ maybe [] pure f
+      return $ maybe [] (\path -> [(Nothing, path)]) f
 
-  if null targetFiles
+  if null targetFilesWithCtx
     then return $ Failure $ Error "No .cabal files found" FileNotFound
     else do
-      let count = length targetFiles
+      let count = length targetFilesWithCtx
       if count > 1 
         then logInfo $ "Processing " <> T.pack (show count) <> " package(s)..."
         else return ()
       
-      forM_ targetFiles $ \path -> do
-        res <- runOn path cmd
+      forM_ targetFilesWithCtx $ \(mCtx, path) -> do
+        res <- runOn mCtx path cmd
         case res of
           Failure e -> logError $ "Failed on " <> T.pack path <> ": " <> errorMessage e
           Success _ -> return ()
       
       return $ Success ()
 
-runOn :: FilePath -> Command -> IO (Result ())
-runOn path cmd = do
+runOn :: Maybe ProjectContext -> FilePath -> Command -> IO (Result ())
+runOn maybeCtx path cmd = do
   let actionDesc = describeAction cmd
   logInfo $ actionDesc <> " (" <> T.pack path <> ")..."
   
   case cmd of
-    AddCmd opts -> addDependency opts path
+    AddCmd opts -> addDependency maybeCtx opts path
     RemoveCmd opts -> removeDependency opts path
     UpgradeCmd opts -> upgradeDependencies opts path
 

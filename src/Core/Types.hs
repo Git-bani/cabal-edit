@@ -159,6 +159,7 @@ data VersionConstraint
   = AnyVersion
   | ExactVersion Version
   | MajorBoundVersion Version
+  | WorkspaceVersion
   | RangeVersion VersionRange
   | UnparsedVersion Text
   | CabalVersionRange VR.VersionRange
@@ -177,10 +178,11 @@ data Version = Version [Int]
 
 -- Command types
 data CLI = CLI
-  { cliCommand :: Command
-  , cliVerbose :: Bool
+  { cliVerbose :: Bool
   , cliQuiet :: Bool
   , cliWorkspace :: Bool
+  , cliPackages :: [Text] -- Targeted packages in workspace
+  , cliCommand :: Command
   } deriving (Show, Eq)
 
 data Command

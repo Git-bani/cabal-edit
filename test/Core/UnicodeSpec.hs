@@ -39,7 +39,7 @@ spec = describe "Core.Unicode" $ do
             , aoPath = Nothing
             , aoPackageNames = ["text"]
             }
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       
       case result of
         Failure e -> expectationFailure $ "Add failed: " ++ show e

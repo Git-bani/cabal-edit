@@ -35,7 +35,7 @@ spec = describe "Business.SourceDep" $ do
       -- So we must set CWD or ensure logic traverses up from cabal file.
       -- `findProjectRoot` uses `getCurrentDirectory`. So we must change dir.
       
-      result <- addDependency opts cabalPath
+      result <- addDependency Nothing opts cabalPath
       result `shouldSatisfy` isSuccess
       
       -- Check .cabal file
@@ -66,7 +66,7 @@ spec = describe "Business.SourceDep" $ do
             , aoPath = Just "../bar"
             }
       
-      result <- addDependency opts cabalPath
+      result <- addDependency Nothing opts cabalPath
       result `shouldSatisfy` isSuccess
       
       -- Check cabal.project

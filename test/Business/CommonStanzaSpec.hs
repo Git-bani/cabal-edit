@@ -28,7 +28,7 @@ spec = describe "Common Stanza Support" $ do
             , aoPath = Nothing
             }
       
-      result <- addDependency opts path
+      result <- addDependency Nothing opts path
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path
