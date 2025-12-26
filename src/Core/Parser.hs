@@ -172,14 +172,15 @@ findSectionPosition sectionName raw =
              endOffset = start + T.length headerLine + 1 + findSectionEnd actualRest
          in TextSpan (TextOffset start) (TextOffset endOffset)
 
--- | Find the start offset of a section, ignoring comments
+-- | Find the start offset of a section, ignoring comments (line and block)
 findSectionStart :: Text -> Text -> Maybe Int
-findSectionStart target raw = go 0 raw
+findSectionStart target raw = go 0 0 raw
   where
     targetLower = T.toLower target
+    targetLen = T.length target
     
-    go :: Int -> Text -> Maybe Int
-    go offset remaining
+    go :: Int -> Int -> Text -> Maybe Int
+    go offset nesting remaining
       | T.null remaining = Nothing
       | otherwise = 
           let (line, rest) = T.breakOn "\n" remaining
@@ -187,18 +188,43 @@ findSectionStart target raw = go 0 raw
               advance = if T.null rest then lineLen else lineLen + 1
               rest' = if T.null rest then "" else T.drop 1 rest
               
-              trimmed = T.stripStart line
-              trimmedLower = T.toLower trimmed
-          in 
-            if "--" `T.isPrefixOf` trimmed
-            then go (offset + advance) rest' 
-            else if targetLower `T.isPrefixOf` trimmedLower && checkBoundary (T.length target) trimmedLower
-            then Just offset 
-            else go (offset + advance) rest'
+              (newNesting, matchInLine) = scanLine nesting line
+          in case matchInLine of
+               Just relativeOffset -> Just (offset + relativeOffset)
+               Nothing -> go (offset + advance) newNesting rest'
+
+    scanLine :: Int -> Text -> (Int, Maybe Int)
+    scanLine initialNesting line = 
+        let lowerLine = T.toLower line
+        in scan 0 initialNesting False line lowerLine
+
+    -- scan :: CurrentIdx -> Nesting -> SeenContent -> OriginalLine -> LowerLine -> (FinalNesting, Maybe MatchOffset)
+    scan :: Int -> Int -> Bool -> Text -> Text -> (Int, Maybe Int)
+    scan idx nesting seenContent l lowerL
+      | T.null l = (nesting, Nothing)
+      | nesting > 0 =
+          if "{-" `T.isPrefixOf` l then
+             scan (idx + 2) (nesting + 1) seenContent (T.drop 2 l) (T.drop 2 lowerL)
+          else if "-}" `T.isPrefixOf` l then
+             scan (idx + 2) (nesting - 1) seenContent (T.drop 2 l) (T.drop 2 lowerL)
+          else
+             scan (idx + 1) nesting seenContent (T.tail l) (T.tail lowerL)
+      | otherwise =
+          -- Nesting 0
+          if "--" `T.isPrefixOf` l then (nesting, Nothing)
+          else if "{-" `T.isPrefixOf` l then
+             scan (idx + 2) (nesting + 1) seenContent (T.drop 2 l) (T.drop 2 lowerL)
+          else if not seenContent && targetLower `T.isPrefixOf` lowerL && checkBoundary targetLen lowerL then
+             (nesting, Just idx)
+          else
+             let c = T.head l
+                 isWhitespace = c == ' ' || c == '\t' || c == '\r'
+                 newSeen = seenContent || not isWhitespace
+             in scan (idx + 1) nesting newSeen (T.tail l) (T.tail lowerL)
 
     checkBoundary :: Int -> Text -> Bool
-    checkBoundary targetLen lineLower = 
-      case T.uncons (T.drop targetLen lineLower) of
+    checkBoundary len lineLower = 
+      case T.uncons (T.drop len lineLower) of
         Nothing -> True
         Just (c, _) -> c `elem` [' ', '\t', '\r']
 

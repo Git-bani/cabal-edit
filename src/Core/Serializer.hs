@@ -338,7 +338,7 @@ spanIndentedBlock keyIndent text =
               else ([], l:ls)
 
 removeDependencyLine :: Text -> Bool -> Dependency -> Text -> Text
-removeDependencyLine eol leadingComma dep content =
+removeDependencyLine eol _leadingComma dep content =
   let baseIndent = detectBaseIndent content
       maybeTarget = findMainBuildDepends baseIndent content
   in case maybeTarget of
@@ -352,9 +352,13 @@ removeDependencyLine eol leadingComma dep content =
              
          in case maybeLoc of 
               Just idx -> 
-                 -- Remove line at idx
-                 if idx == 0 
-                 then
+                 -- Check if this is the last dependency
+                 if length depsWithLoc == 1
+                 then before <> afterBlock
+                 else
+                   -- Remove line at idx
+                   if idx == 0 
+                   then
                    -- Removing from targetLine (inline)
                    let line0Deps = filter (\(_, i) -> i == 0) depsWithLoc
                        otherDepsOnLine0 = filter (\(d, _) -> depName d /= depName dep) line0Deps

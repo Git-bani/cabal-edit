@@ -45,16 +45,30 @@ spec = describe "Core.Parser" $ do
             ]
       let TextSpan (TextOffset start) (TextOffset end) = findSectionPosition "library" content
       
-      -- Verification logic:
-      -- "library" starts at line 3 (index 2).
-      -- start offset should point to start of "library" line + newline?
-      -- Parser implementation uses `findSectionPosition` which looks for "\n" <> sectionName.
-      
       -- Let's check extracted content
       let extracted = T.take (end - start) (T.drop start content)
       extracted `shouldSatisfy` ("build-depends" `T.isInfixOf`)
       extracted `shouldSatisfy` ("default-language" `T.isInfixOf`)
       extracted `shouldNotSatisfy` ("executable" `T.isInfixOf`)
+
+    it "ignores section headers inside block comments" $ do
+      let content = T.unlines
+            [ "name: foo"
+            , ""
+            , "{-"
+            , "library"
+            , "  build-depends: wrong-lib"
+            , "-}"
+            , ""
+            , "library"
+            , "  build-depends: correct-lib"
+            ]
+      let TextSpan (TextOffset start) (TextOffset end) = findSectionPosition "library" content
+      let extracted = T.take (end - start) (T.drop start content)
+      
+      -- It should match the second library
+      extracted `shouldSatisfy` ("correct-lib" `T.isInfixOf`)
+      extracted `shouldNotSatisfy` ("wrong-lib" `T.isInfixOf`)
 
 simpleCabal :: Text
 simpleCabal = T.unlines

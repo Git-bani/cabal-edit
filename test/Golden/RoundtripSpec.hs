@@ -10,44 +10,44 @@ import qualified Data.Text.IO as TIO
 import System.Directory (getCurrentDirectory, copyFile, removeFile)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
+import Control.Monad (forM_)
 
 spec :: Spec
 spec = describe "Golden Roundtrip" $ do
   
-  it "preserves file exactly after Add + Remove cycle" $ do
-    withFixture "complex.cabal" $ \path -> do
-      original <- TIO.readFile path
-      
-      -- 1. Add a unique dependency
-      let addOpts = AddOptions 
-            { aoPackageName = "containers"
-            , aoVersion = Just ">=0.1"
-            , aoSection = TargetLib
-            , aoDev = False
-            , aoDryRun = False
-            }
-      
-      resAdd <- addDependency addOpts path
-      resAdd `shouldSatisfy` isSuccess
-      
-      -- 2. Remove the same dependency
-      let rmOpts = RemoveOptions
-            { roPackageName = "containers"
-            , roSection = TargetLib
-            , roDryRun = False
-            }
-            
-      resRm <- removeDependency rmOpts path
-      resRm `shouldSatisfy` isSuccess
-      
-      -- 3. Verify content match
-      final <- TIO.readFile path
-      
-      -- Note: There might be minor whitespace differences depending on how we insert/remove lines.
-      -- Ideally, it should be identical.
-      -- If insert adds a newline and remove deletes it including the newline, it should work.
-      
-      final `shouldBe` original
+  let fixtures = ["complex.cabal", "common-stanzas.cabal"]
+  
+  forM_ fixtures $ \fixture -> do
+    it ("preserves " ++ fixture ++ " exactly after Add + Remove cycle") $ do
+      withFixture fixture $ \path -> do
+        original <- TIO.readFile path
+        
+        -- 1. Add a unique dependency
+        let addOpts = AddOptions 
+              { aoPackageName = "containers"
+              , aoVersion = Just ">=0.1"
+              , aoSection = TargetLib
+              , aoDev = False
+              , aoDryRun = False
+              }
+        
+        resAdd <- addDependency addOpts path
+        resAdd `shouldSatisfy` isSuccess
+        
+        -- 2. Remove the same dependency
+        let rmOpts = RemoveOptions
+              { roPackageName = "containers"
+              , roSection = TargetLib
+              , roDryRun = False
+              }
+              
+        resRm <- removeDependency rmOpts path
+        resRm `shouldSatisfy` isSuccess
+        
+        -- 3. Verify content match
+        final <- TIO.readFile path
+        
+        final `shouldBe` original
 
 withFixture :: String -> (FilePath -> IO a) -> IO a
 withFixture name action = do
