@@ -8,6 +8,20 @@ A command-line utility for managing Cabal dependencies, inspired by cargo-edit.
 cabal install cabal-edit
 ```
 
+## System Requirements
+
+`cabal-edit` requires `openssl` and `zlib` to be installed on your system for network communication with Hackage.
+
+### Linux (Ubuntu/Debian)
+```bash
+sudo apt-get install -y libssl-dev zlib1g-dev pkg-config
+```
+
+### macOS
+```bash
+brew install openssl zlib
+```
+
 ## Quick Start
 
 ### Adding Dependencies
