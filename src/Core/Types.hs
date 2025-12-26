@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Core.Types 
   ( -- * Core Types
@@ -45,10 +48,13 @@ import qualified Data.Text as T
 import Data.Char (isAlphaNum)
 import Control.Exception (Exception)
 import qualified Distribution.Types.VersionRange as VR
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 
 -- | Strongly typed package name
 newtype PackageName = PackageName Text
-  deriving (Eq, Ord, Show)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (NFData)
 
 -- | Smart constructor for PackageName
 mkPackageName :: Text -> Either Text PackageName
@@ -76,13 +82,14 @@ isValidPackageName name =
 
 -- | Type-safe text offset (code point index)
 newtype TextOffset = TextOffset Int
-  deriving (Eq, Ord, Show, Num, Enum, Real, Integral)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (Num, Enum, NFData, Real, Integral)
 
 -- | Type-safe text span
 data TextSpan = TextSpan
   { spanStart :: TextOffset
   , spanEnd   :: TextOffset
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 -- | Targeted section for commands
 data SectionTarget
@@ -93,7 +100,7 @@ data SectionTarget
   | TargetCommon (Maybe Text)
   | TargetNamed Text        -- Specific name, type unknown (legacy/fuzzy match)
   | TargetConditional SectionTarget Text -- Target a specific 'if' block inside a section
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 -- Represents a parsed Cabal file with structure preservation
 data CabalFile = CabalFile
@@ -101,7 +108,7 @@ data CabalFile = CabalFile
   , cfSections :: [Section]
   , cfRawContent :: Text  -- Original content for format preservation
   , cfLineEndings :: Text -- Detected line ending ("\n" or "\r\n")
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 -- Represents a section in a Cabal file
 data Section
@@ -111,50 +118,50 @@ data Section
   | BenchmarkSection Benchmark
   | CommonStanzaSection CommonStanza
   | UnknownSection Text Text  -- name, content
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 data Library = Library
   { libName :: Maybe Text
   , libBuildDepends :: [Dependency]
   , libPosition :: TextSpan
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 data CommonStanza = CommonStanza
   { commonName :: Text
   , commonBuildDepends :: [Dependency]
   , commonPosition :: TextSpan
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 data Executable = Executable
   { exeName :: Text
   , exeBuildDepends :: [Dependency]
   , exePosition :: TextSpan
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 data TestSuite = TestSuite
   { testName :: Text
   , testBuildDepends :: [Dependency]
   , testPosition :: TextSpan
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 data Benchmark = Benchmark
   { benchName :: Text
   , benchBuildDepends :: [Dependency]
   , benchPosition :: TextSpan
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 -- Dependency representation
 data Dependency = Dependency
   { depName :: PackageName
   , depVersionConstraint :: Maybe VersionConstraint
   , depType :: DependencyType
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 instance Ord Dependency where
   compare d1 d2 = compare (depName d1) (depName d2)
 
 data DependencyType = BuildDepends | TestDepends | BenchmarkDepends
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 -- Version constraint handling
 data VersionConstraint
@@ -165,18 +172,18 @@ data VersionConstraint
   | RangeVersion VersionRange
   | UnparsedVersion Text
   | CabalVersionRange VR.VersionRange
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 data VersionRange = VersionRange
   { lowerBound :: Maybe (Version, BoundType)
   , upperBound :: Maybe (Version, BoundType)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 data BoundType = Inclusive | Exclusive
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 data Version = Version [Int] 
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generic, NFData)
 
 -- Command types
 data CLI = CLI
@@ -225,12 +232,12 @@ data UpgradeOptions = UpgradeOptions
 data Result a
   = Success a
   | Failure Error
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 data Error = Error
   { errorMessage :: Text
   , errorCode :: ErrorCode
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NFData)
 
 instance Exception Error
 
@@ -242,4 +249,4 @@ data ErrorCode
   | VersionConflict
   | FileModificationError
   | SecurityError
-  deriving (Show, Eq, Enum)
+  deriving (Show, Eq, Enum, Generic, NFData)

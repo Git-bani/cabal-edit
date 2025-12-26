@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Business.SetVersion (setVersion) where
+module Business.SetVersion (setVersion, updateProjectVersion) where
 
 import Core.Types (SetVersionOptions(..), Result(..), CabalFile(..))
 import Core.Parser

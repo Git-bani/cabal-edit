@@ -6,6 +6,8 @@ module Core.Parser
   , findSection
   , findSectionPosition
   , findConditionalPosition
+  , scanCommonStanzas
+  , parseCommonDeps
   , getSectionBounds
   , resolveTargetBounds
   , describeSection
