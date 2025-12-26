@@ -33,6 +33,7 @@
 
 - **Config.hs**: Configuration loading and management (JSON).
 - **Logging.hs**: TTY-aware structured logging utilities.
+- **Terminal.hs**: Interactive CLI utilities for item selection.
 - **Formatting.hs**: Text formatting helpers.
 
 ## Data Types

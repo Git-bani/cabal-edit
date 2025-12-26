@@ -36,6 +36,9 @@ cabal-edit add aeson --version "^>= 2.0"
 # Add to a specific section (library, executable, test-suite, benchmark)
 cabal-edit add hspec --section test-suite --dev
 
+# Add to a conditional block
+cabal-edit add Win32 --if "os(windows)"
+
 # Dry run (see changes without writing to disk)
 cabal-edit add lens --dry-run
 ```

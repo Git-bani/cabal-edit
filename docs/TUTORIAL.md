@@ -39,6 +39,16 @@ You can target specific sections like executables or test suites:
 cabal-edit add hspec --section test:my-test-suite
 ```
 
+**Adding to conditional blocks:**
+
+You can add a dependency directly to an `if` block:
+
+```bash
+cabal-edit add Win32 --if "os(windows)"
+```
+
+If the block doesn't exist, `cabal-edit` will create it for you at the end of the section.
+
 ### 2. Removing a Dependency
 
 To remove a library:
