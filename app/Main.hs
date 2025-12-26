@@ -14,8 +14,9 @@ import Core.ProjectContext
 import Utils.Logging
 import Data.Text (Text)
 import qualified Data.Text as T
-import System.Directory (getCurrentDirectory, listDirectory)
+import System.Directory (getCurrentDirectory, listDirectory, doesFileExist, makeAbsolute)
 import System.Exit (exitSuccess, exitWith, ExitCode(..))
+import System.FilePath (takeDirectory, (</>))
 import Data.List (isSuffixOf, isPrefixOf)
 import Control.Monad (when, forM_)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
@@ -244,6 +245,16 @@ executeCommand (CLI verbose quiet workspace packages cmd) = do
 runOn :: Maybe ProjectContext -> FilePath -> Command -> IO (Result ())
 runOn maybeCtx path cmd = do
   let actionDesc = describeAction cmd
+  
+  -- Check for hpack (package.yaml)
+  let dir = takeDirectory path
+  let hpackPath = if null dir then "package.yaml" else dir </> "package.yaml"
+  absHpack <- makeAbsolute hpackPath
+  hasHpack <- doesFileExist hpackPath
+  logDebug $ "Checking for hpack at: " <> T.pack hpackPath <> " (abs: " <> T.pack absHpack <> ") -> " <> T.pack (show hasHpack)
+  when hasHpack $ do
+    logWarning $ "package.yaml detected. Changes to " <> T.pack path <> " may be overwritten by hpack!"
+  
   logInfo $ actionDesc <> " (" <> T.pack path <> ")..."
   
   case cmd of

@@ -4,6 +4,7 @@ module Utils.Logging
   ( LogLevel(..)
   , setLogLevel
   , logInfo
+  , logWarning
   , logError
   , logDebug
   , logSuccess
@@ -17,7 +18,7 @@ import Control.Monad (when)
 import Data.IORef
 import System.IO.Unsafe (unsafePerformIO)
 
-data LogLevel = Debug | Info | SuccessLevel | ErrorLevel | Quiet
+data LogLevel = Debug | Info | WarnLevel | SuccessLevel | ErrorLevel | Quiet
   deriving (Eq, Ord, Show)
 
 -- | Global log level state
@@ -39,6 +40,7 @@ logMsg level msg = do
     let maybeColor code txt = if isTTY then colorize code txt else txt
     let prefix = case level of
           Debug        -> maybeColor "36" "[DEBUG] "
+          WarnLevel    -> maybeColor "33" "[WARNING] "
           ErrorLevel   -> maybeColor "31" "Error: "
           SuccessLevel -> maybeColor "32" "✓ "
           _            -> ""
@@ -46,6 +48,9 @@ logMsg level msg = do
 
 logInfo :: Text -> IO ()
 logInfo = logMsg Info
+
+logWarning :: Text -> IO ()
+logWarning = logMsg WarnLevel
 
 logError :: Text -> IO ()
 logError = logMsg ErrorLevel
