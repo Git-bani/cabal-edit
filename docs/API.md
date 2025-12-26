@@ -9,6 +9,7 @@
 - **Types.hs**: Defines the core data structures (`CabalFile`, `Dependency`, `Section`).
 - **Parser.hs**: Handles parsing of `.cabal` files while preserving raw content for exact round-tripping.
 - **Serializer.hs**: Manages the serialization and surgical editing of file content (insertions/deletions).
+- **HpackEditor.hs**: Provides surgical editing for `package.yaml` (Hpack) files.
 - **DependencyResolver.hs**: Logic for resolving versions against Hackage.
 - **ProjectContext.hs**: Handles workspace logic (`cabal.project` parsing).
 - **Safety.hs**: Provides file locking and verification mechanisms.
@@ -17,6 +18,7 @@
 
 - **Add.hs**: Implements the logic for adding dependencies.
 - **Remove.hs**: Implements logic for removing dependencies.
+- **Hpack.hs**: Specialized business logic for Hpack-based projects.
 - **Upgrade.hs**: Implements dependency upgrade workflows.
 - **SetVersion.hs**: Logic for updating package version.
 - **Flag.hs**: Logic for managing Cabal flags.

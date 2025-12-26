@@ -85,9 +85,11 @@ If you're unsure about a change, use `--dry-run` to see a preview without modify
 cabal-edit add lens --dry-run
 ```
 
-### Hpack Integration
+### Hpack Support
 
-If you use `hpack` (`package.yaml`), `cabal-edit` will detect it and issue a warning. Since Hpack manages the `.cabal` file, manual changes made by `cabal-edit` might be overwritten the next time `hpack` runs.
+If you use `hpack` (`package.yaml`), `cabal-edit` will automatically detect it. Instead of modifying the `.cabal` file (which would be overwritten by `hpack`), `cabal-edit` will surgically edit your `package.yaml` to add or remove dependencies, preserving your YAML formatting and comments.
+
+A warning will still be displayed to remind you that the tool is operating on the Hpack configuration.
 
 ## Workspace Support
 

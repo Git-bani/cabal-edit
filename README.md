@@ -116,7 +116,7 @@ cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 - ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
 - ✅ **Flag Management**: Easily add, enable, or disable Cabal flags.
 - ✅ **Version Management**: Set project version from the CLI.
-- ✅ **Hpack Awareness**: Warns if a `package.yaml` is present to avoid accidental overwrites.
+- ✅ **Hpack Support**: Automatically detects and edits `package.yaml` files when present.
 - ✅ **Workspace Support**: Full support for `cabal.project` and multi-package setups.
 - ✅ **Format Preservation**: Preserves comments, indentation, and leading/trailing comma styles.
 - ✅ **Advanced Safety**: 
