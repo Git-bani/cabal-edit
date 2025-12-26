@@ -33,8 +33,10 @@ cabal-edit add text --version "^>= 1.2"
 
 **Adding to a specific section:**
 
+You can target specific sections like executables or test suites:
+
 ```bash
-cabal-edit add hspec --section test-suite --dev
+cabal-edit add hspec --section test:my-test-suite
 ```
 
 ### 2. Removing a Dependency
@@ -53,41 +55,59 @@ To upgrade all dependencies to their latest versions:
 cabal-edit upgrade
 ```
 
-To see what would change without actually writing to the file:
+## Advanced Features
+
+### Managing Flags
+
+Cabal flags can be managed directly:
 
 ```bash
-cabal-edit upgrade --dry-run
+# Add a flag
+cabal-edit flag add manual-feature
+
+# Enable it (sets default: True)
+cabal-edit flag enable manual-feature
 ```
 
-## Output Control
+### Setting Project Version
 
-For scripting or automated environments, you might want to suppress output:
+Quickly update your package version:
 
 ```bash
-cabal-edit add aeson --quiet
+cabal-edit set-version 1.0.0
 ```
 
-Or enable verbose logging for debugging:
+### Dry Runs
+
+If you're unsure about a change, use `--dry-run` to see a preview without modifying any files:
 
 ```bash
-cabal-edit add aeson --verbose
+cabal-edit add lens --dry-run
 ```
 
-## Advanced Usage
+### Hpack Integration
 
-### Workspace Support
+If you use `hpack` (`package.yaml`), `cabal-edit` will detect it and issue a warning. Since Hpack manages the `.cabal` file, manual changes made by `cabal-edit` might be overwritten the next time `hpack` runs.
+
+## Workspace Support
 
 If you have a `cabal.project` file managing multiple packages:
 
 ```bash
-# Add a dependency to ALL packages in the workspace (where applicable)
+# Add a dependency to ALL packages in the workspace
 cabal-edit -w add lens
 
-# Upgrade all packages in the workspace
-cabal-edit -w upgrade
+# Target specific packages in the workspace
+cabal-edit -p my-lib -p my-app upgrade
 ```
 
-### Configuration
+## Configuration
 
 You can customize `cabal-edit` via `~/.cabal-edit/config.json`.
-(See API documentation for config details).
+
+```json
+{
+  "hackage_url": "https://hackage.haskell.org",
+  "leading_comma": true
+}
+```

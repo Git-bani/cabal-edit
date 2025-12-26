@@ -21,6 +21,9 @@ cabal-edit add aeson --version "^>= 2.0"
 
 # Add to a specific section (library, executable, test-suite, benchmark)
 cabal-edit add hspec --section test-suite --dev
+
+# Dry run (see changes without writing to disk)
+cabal-edit add lens --dry-run
 ```
 
 ### Removing Dependencies
@@ -28,6 +31,9 @@ cabal-edit add hspec --section test-suite --dev
 ```bash
 # Remove a dependency
 cabal-edit rm old-package
+
+# Remove from a specific section
+cabal-edit rm old-package --section executable:my-exe
 ```
 
 ### Upgrading Dependencies
@@ -43,13 +49,34 @@ cabal-edit upgrade --dry-run
 cabal-edit upgrade aeson
 ```
 
+### Version Management
+
+```bash
+# Set the project version
+cabal-edit set-version 1.2.3.0
+```
+
+### Flag Management
+
+```bash
+# Add a new flag
+cabal-edit flag add my-feature
+
+# Enable/Disable existing flags
+cabal-edit flag enable my-feature
+cabal-edit flag disable my-feature
+
+# Remove a flag
+cabal-edit flag remove my-feature
+```
+
 ### Output Control
 
 ```bash
 # Suppress all output (useful for scripts)
 cabal-edit add aeson --quiet
 
-# Enable verbose logging
+# Enable verbose logging (shows debug info)
 cabal-edit add aeson --verbose
 ```
 
@@ -63,20 +90,26 @@ cabal-edit -w add lens
 
 # Upgrade everything in the workspace
 cabal-edit -w upgrade
+
+# Target specific packages in the workspace
+cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 ```
 
 ## Features
 
 - ✅ **Smart Add**: Resolves latest versions from Hackage automatically.
-- ✅ **Remove**: Safely removes dependencies from specific sections.
-- ✅ **Upgrade**: Bulk upgrade dependencies with dry-run support.
-- ✅ **Workspace Support**: Manages multiple packages via `cabal.project`.
-- ✅ **Format Preservation**: Uses surgical edits to preserve comments and indentation.
-- ✅ **Leading Comma Style**: Enforces leading commas for cleaner diffs.
-- ✅ **Safety**: 
-    - File locking prevents race conditions.
-    - Automatic backups (`.bak`).
-    - In-memory verification validates changes before writing to disk.
+- ✅ **Surgical Remove**: Safely removes dependencies while preserving file structure.
+- ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
+- ✅ **Flag Management**: Easily add, enable, or disable Cabal flags.
+- ✅ **Version Management**: Set project version from the CLI.
+- ✅ **Hpack Awareness**: Warns if a `package.yaml` is present to avoid accidental overwrites.
+- ✅ **Workspace Support**: Full support for `cabal.project` and multi-package setups.
+- ✅ **Format Preservation**: Preserves comments, indentation, and leading/trailing comma styles.
+- ✅ **Advanced Safety**: 
+    - **Atomic Writes**: Uses temporary files and atomic moves to prevent file corruption.
+    - **In-memory Verification**: Validates Cabal file syntax before committing changes.
+    - **TTY Detection**: Clean output in non-terminal environments (no junk characters).
+    - **Dry Run Support**: Every modifying command supports `--dry-run`.
 
 ## Development
 

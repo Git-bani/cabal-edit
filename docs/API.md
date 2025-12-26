@@ -16,8 +16,11 @@
 ### Business Layer (`src/Business/`)
 
 - **Add.hs**: Implements the logic for adding dependencies.
-- **Remove.hs**: Implemented logic for removing dependencies.
+- **Remove.hs**: Implements logic for removing dependencies.
 - **Upgrade.hs**: Implements dependency upgrade workflows.
+- **SetVersion.hs**: Logic for updating package version.
+- **Flag.hs**: Logic for managing Cabal flags.
+- **Validation.hs**: Cabal syntax validation and safety checks.
 
 ### External Layer (`src/External/`)
 
@@ -27,19 +30,21 @@
 ### Utils Layer (`src/Utils/`)
 
 - **Config.hs**: Configuration loading and management (JSON).
-- **Logging.hs**: Structured logging utilities.
+- **Logging.hs**: TTY-aware structured logging utilities.
+- **Formatting.hs**: Text formatting helpers.
 
 ## Data Types
 
 ### `CabalFile`
 
-Represents a parsed Cabal file.
+Represents a parsed Cabal file with metadata for format preservation.
 
 ```haskell
 data CabalFile = CabalFile
-  { cfPackageName :: Text
+  { cfPackageName :: PackageName
   , cfSections :: [Section]
-  , cfRawContent :: Text  -- Original content for format preservation
+  , cfRawContent :: Text
+  , cfLineEndings :: Text -- "\n" or "\r\n"
   }
 ```
 
@@ -49,12 +54,19 @@ Represents a single dependency entry.
 
 ```haskell
 data Dependency = Dependency
-  { depName :: Text
+  { depName :: PackageName
   , depVersionConstraint :: Maybe VersionConstraint
   , depType :: DependencyType
   }
 ```
 
+### `PackageName`
+
+Strongly typed package name with validation.
+
+```haskell
+newtype PackageName = PackageName Text
+```
 ## Configuration
 
 Configuration is stored in `~/.cabal-edit/config.json`.
