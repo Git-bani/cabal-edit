@@ -4,17 +4,18 @@ module Business.Upgrade (upgradeDependencies) where
 
 import Core.Types
 import Core.Parser
-import Core.Serializer
+import Core.Serializer (replaceBuildDependsBlock, formatVersionConstraint)
 import Core.Safety
 import Core.DependencyResolver
 import Utils.Logging (logInfo)
 import Utils.Config (loadConfig, Config(..))
+import Utils.Terminal (selectItems)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.List (sortOn)
 import Data.Ord (Down(..))
-import Control.Monad (foldM)
+import Control.Monad (foldM, forM)
 
 upgradeDependencies :: UpgradeOptions -> FilePath -> IO (Result ())
 upgradeDependencies opts path = do
@@ -28,80 +29,89 @@ upgradeDependencies opts path = do
       let rawContent = cfRawContent cabalFile
       let sections = cfSections cabalFile
       
-      -- 2. Sort sections by position descending (to safely modify from end to start)
-      let sortedSections = sortOn (Down . getStartOffset) sections
+      -- 2. Gathering all upgradeable dependencies across all sections
+      allUpgrades <- gatherAllUpgrades opts sections
       
-      -- 3. Apply upgrades section by section
-      finalContentResult <- foldM (processSection opts (cfLineEndings cabalFile) leadingComma) (Success rawContent) sortedSections
-      
-      case finalContentResult of
+      case allUpgrades of
         Failure err -> return $ Failure err
-        Success newContent -> do
-          -- 4. Write back if changed
-          if newContent /= rawContent
-            then 
-              if uoDryRun opts
-                then do
-                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                  TIO.putStrLn newContent
-                  return $ Success ()
-                else safeWriteCabal path newContent
-            else return $ Success ()
+        Success potentialUpgrades -> do
+          -- 3. Handle interactive selection
+          selectedUpgrades <- if uoInteractive opts && not (null potentialUpgrades)
+            then do
+              let items = map formatUpgrade potentialUpgrades
+              selectedItems <- selectItems "Select packages to upgrade:" items
+              return $ filter (\u -> formatUpgrade u `elem` selectedItems) potentialUpgrades
+            else return potentialUpgrades
+          
+          if null selectedUpgrades
+            then return $ Success ()
+            else do
+              -- 4. Sort sections by position descending (to safely modify from end to start)
+              let sortedSections = sortOn (Down . getStartOffset) sections
+              
+              -- 5. Apply selected upgrades section by section
+              finalContentResult <- foldM (processSection selectedUpgrades (cfLineEndings cabalFile) leadingComma) (Success rawContent) sortedSections
+              
+              case finalContentResult of
+                Failure err -> return $ Failure err
+                Success newContent -> do
+                  -- 6. Write back if changed
+                  if newContent /= rawContent
+                    then 
+                      if uoDryRun opts
+                        then do
+                          logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                          TIO.putStrLn newContent
+                          return $ Success ()
+                        else safeWriteCabal path newContent
+                    else return $ Success ()
 
 getStartOffset :: Section -> Int
 getStartOffset s = 
   let TextSpan (TextOffset start) _ = getSectionBounds s 
   in start
 
-processSection :: UpgradeOptions -> Text -> Bool -> Result Text -> Section -> IO (Result Text)
+gatherAllUpgrades :: UpgradeOptions -> [Section] -> IO (Result [Dependency])
+gatherAllUpgrades opts sections = do
+  let allDeps = concatMap findDependencies sections
+  let targetDeps = if null (uoPackageNames opts)
+                   then allDeps
+                   else 
+                     let pkgNames = map unsafeMkPackageName (uoPackageNames opts)
+                     in filter (\d -> depName d `elem` pkgNames) allDeps
+  
+  -- Resolve latest versions
+  upgradedDepsResult <- forM targetDeps upgradeDependency
+  let failures = [e | Failure e <- upgradedDepsResult]
+  case failures of
+    (e:_) -> return $ Failure e
+    [] -> return $ Success [d | Success d <- upgradedDepsResult]
+
+formatUpgrade :: Dependency -> Text
+formatUpgrade dep = unPackageName (depName dep) <> " " <> formatVersionConstraint (depVersionConstraint dep)
+
+processSection :: [Dependency] -> Text -> Bool -> Result Text -> Section -> IO (Result Text)
 processSection _ _ _ (Failure err) _ = return $ Failure err
-processSection opts eol leadingComma (Success content) section = do
+processSection selectedUpgrades eol leadingComma (Success content) section = do
   let deps = findDependencies section
+  -- Find upgrades that apply to this section
+  let upgradesForThisSection = filter (\u -> any (\d -> depName d == depName u) deps) selectedUpgrades
   
-  -- Filter dependencies if user requested specific packages
-  let targetResult = if null (uoPackageNames opts)
-                     then Success deps
-                     else 
-                       let pkgNamesResult = mapM mkPackageName (uoPackageNames opts)
-                       in case pkgNamesResult of
-                            Left err -> Failure $ Error err InvalidDependency
-                            Right names -> Success $ filter (\d -> depName d `elem` names) deps
-  
-  case targetResult of
-    Failure err -> return $ Failure err
-    Success targetDeps -> do
-      if null targetDeps
-        then return $ Success content
-        else do
-          -- Resolve latest versions for these dependencies
-          upgradedDepsResult <- mapM upgradeDependency targetDeps
-          
-          -- Check if any failed
-          let failures = [e | Failure e <- upgradedDepsResult]
-          case failures of
-            (e:_) -> return $ Failure e -- Return first error
-            [] -> do
-              let upgrades = [d | Success d <- upgradedDepsResult]
-              
-              -- Merge upgrades into original list
-              -- We need to replace items in 'deps' with those in 'upgrades'
-              let newDeps = mergeDependencies deps upgrades
-              
-              -- Apply change to content
-              if newDeps == deps
-                then return $ Success content -- No changes needed
-                else return $ Success $ applySectionUpdate eol leadingComma content section newDeps
+  if null upgradesForThisSection
+    then return $ Success content
+    else 
+      let newDeps = mergeDependencies deps upgradesForThisSection
+      in if newDeps == deps
+         then return $ Success content
+         else return $ Success $ applySectionUpdate eol leadingComma content section newDeps
 
 upgradeDependency :: Dependency -> IO (Result Dependency)
 upgradeDependency dep = do
-  -- Note: resolveLatestVersion now expects PackageName
   res <- resolveLatestVersion (depName dep)
   case res of
     Failure err -> return $ Failure err
     Success ver -> do
-      -- Create new dependency with MajorBoundVersion (^>=)
       let newConstraint = MajorBoundVersion ver
-      -- Check if it's different from current
       return $ Success $ dep { depVersionConstraint = Just newConstraint }
 
 mergeDependencies :: [Dependency] -> [Dependency] -> [Dependency]
@@ -120,6 +130,5 @@ applySectionUpdate eol leadingComma content section newDeps =
       (before, rest) = T.splitAt start content
       (sectionContent, after) = T.splitAt (end - start) rest
       
-      -- Replace the block in the section content
       newSectionContent = replaceBuildDependsBlock eol leadingComma newDeps sectionContent
   in before <> newSectionContent <> after

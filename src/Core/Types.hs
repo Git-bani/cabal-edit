@@ -253,6 +253,7 @@ data RemoveOptions = RemoveOptions
 
 data UpgradeOptions = UpgradeOptions
   { uoDryRun :: Bool
+  , uoInteractive :: Bool
   , uoPackageNames :: [Text]  -- Empty means all
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)

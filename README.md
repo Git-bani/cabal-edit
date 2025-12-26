@@ -56,6 +56,9 @@ cabal-edit rm old-package --section executable:my-exe
 # Upgrade all dependencies to latest versions
 cabal-edit upgrade
 
+# Interactive mode (select which packages to upgrade)
+cabal-edit upgrade -i
+
 # Dry run (see what would change)
 cabal-edit upgrade --dry-run
 

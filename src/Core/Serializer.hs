@@ -9,6 +9,7 @@ module Core.Serializer
   , insertDependencyLine
   , removeDependencyLine
   , updateDependencyLine
+  , formatVersionConstraint
   , replaceBuildDependsBlock
   , detectIndentation
   )

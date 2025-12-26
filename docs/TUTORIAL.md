@@ -55,6 +55,16 @@ To upgrade all dependencies to their latest versions:
 cabal-edit upgrade
 ```
 
+### Interactive Upgrade
+
+You can selectively upgrade dependencies using the interactive mode:
+
+```bash
+cabal-edit upgrade -i
+```
+
+This will present a list of all upgradeable dependencies, allowing you to toggle them using the spacebar before confirming with Enter.
+
 ## Advanced Features
 
 ### Managing Flags

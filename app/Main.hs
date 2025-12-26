@@ -164,6 +164,10 @@ upgradeParser = UpgradeCmd <$>
   <$> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> switch
+      ( long "interactive"
+      <> short 'i'
+      <> help "Interactive mode" )
   <*> many (T.pack <$> argument str (metavar "PACKAGE"))
   )
 
