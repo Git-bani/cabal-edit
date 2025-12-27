@@ -17,7 +17,7 @@ spec = describe "Cabal Flag Management" $ do
   
   it "adds a new flag" $ do
     withTempCabalFile basicCabal $ \path -> do
-      let opts = FlagOptions "dev" FlagAdd False
+      let opts = FlagOptions (Just "dev") FlagAdd False False
       result <- handleFlag opts path
       result `shouldSatisfy` isSuccess
       
@@ -32,7 +32,7 @@ spec = describe "Cabal Flag Management" $ do
           , "library", "    build-depends: base"
           ]
     withTempCabalFile cabalWithFlag $ \path -> do
-      let opts = FlagOptions "dev" FlagEnable False
+      let opts = FlagOptions (Just "dev") FlagEnable False False
       result <- handleFlag opts path
       result `shouldSatisfy` isSuccess
       
@@ -46,7 +46,7 @@ spec = describe "Cabal Flag Management" $ do
           , "library", "    build-depends: base"
           ]
     withTempCabalFile cabalWithFlag $ \path -> do
-      let opts = FlagOptions "dev" FlagDisable False
+      let opts = FlagOptions (Just "dev") FlagDisable False False
       result <- handleFlag opts path
       result `shouldSatisfy` isSuccess
       
@@ -60,7 +60,7 @@ spec = describe "Cabal Flag Management" $ do
           , "library", "    build-depends: base"
           ]
     withTempCabalFile cabalWithFlag $ \path -> do
-      let opts = FlagOptions "dev" FlagRemove False
+      let opts = FlagOptions (Just "dev") FlagRemove False False
       result <- handleFlag opts path
       result `shouldSatisfy` isSuccess
       

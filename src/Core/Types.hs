@@ -215,9 +215,10 @@ data Command
     deriving anyclass (NFData)
 
 data FlagOptions = FlagOptions
-  { foFlagName :: Text
+  { foFlagName :: Maybe Text
   , foOperation :: FlagOperation
   , foDryRun :: Bool
+  , foInteractive :: Bool
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)
 

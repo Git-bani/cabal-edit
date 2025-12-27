@@ -85,14 +85,19 @@ flagParser = FlagCmd <$> subparser
   <> command "disable" (info (flagOptionsParser FlagDisable) (progDesc "Disable an existing flag (set default: False)"))
   <> command "remove" (info (flagOptionsParser FlagRemove) (progDesc "Remove a flag"))
   )
+  <|> (FlagCmd <$> flagOptionsParser FlagEnable) -- Default to dashboard if no subcommand
 
 flagOptionsParser :: FlagOperation -> Parser FlagOptions
-flagOptionsParser op = FlagOptions . T.pack
-  <$> argument str (metavar "FLAG_NAME")
+flagOptionsParser op = FlagOptions
+  <$> optional (T.pack <$> argument str (metavar "FLAG_NAME"))
   <*> pure op
   <*> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> switch
+      ( long "interactive"
+      <> short 'i'
+      <> help "Open flag dashboard" )
 
 setVersionParser :: Parser Command
 setVersionParser = SetVersionCmd <$>
@@ -304,12 +309,14 @@ describeAction (FlagCmd opts) = describeFlagAction opts
 
 describeFlagAction :: FlagOptions -> Text
 describeFlagAction opts = 
-  let name = foFlagName opts
-  in case foOperation opts of
-       FlagAdd -> "Adding flag " <> name
-       FlagEnable -> "Enabling flag " <> name
-       FlagDisable -> "Disabling flag " <> name
-       FlagRemove -> "Removing flag " <> name
+  case foFlagName opts of
+    Nothing -> "Opening flag dashboard"
+    Just name ->
+      case foOperation opts of
+        FlagAdd -> "Adding flag " <> name
+        FlagEnable -> "Enabling flag " <> name
+        FlagDisable -> "Disabling flag " <> name
+        FlagRemove -> "Removing flag " <> name
 
 -- Find .cabal file in current directory
 findCabalFile :: IO (Maybe FilePath)

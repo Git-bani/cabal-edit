@@ -8,6 +8,7 @@ module Core.DependencyResolver
 import Core.Types
 import Core.ProjectContext (ProjectContext(..))
 import External.Hackage (fetchLatestVersion)
+import Utils.Logging (logWarning)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Distribution.Parsec as CabalParsec
@@ -36,7 +37,12 @@ resolveVersionConstraint maybeCtx pkgName Nothing = do
       res <- resolveLatestVersion pkgName
       case res of
         Success v -> return $ Success (MajorBoundVersion v)
-        Failure e -> return $ Failure e
+        Failure e -> 
+          if errorCode e == NetworkError
+            then do
+              logWarning $ "Could not fetch latest version for " <> unPackageName pkgName <> " (offline?). Adding without constraint."
+              return $ Success AnyVersion
+            else return $ Failure e
 
 resolveVersionConstraint _ _ (Just constraint) = do
   -- Validate the constraint syntax using Cabal's parser
