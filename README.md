@@ -124,6 +124,15 @@ cabal-edit -w upgrade
 cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 ```
 
+## Supported GHC Versions
+
+`cabal-edit` is compatible with **GHC 8.10.1** and newer. It is officially tested on:
+
+- GHC 9.6
+- GHC 9.8
+- GHC 9.10
+- GHC 9.12
+
 ## Features
 
 - ✅ **Smart Add**: Resolves latest versions from Hackage automatically (with offline fallback).
