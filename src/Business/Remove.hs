@@ -13,6 +13,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 
+import Utils.Diff (diffLines, colorizeDiff)
+
 removeDependency :: RemoveOptions -> FilePath -> IO (Result ())
 removeDependency opts path = do
   cfg <- loadConfig
@@ -35,7 +37,8 @@ removeDependency opts path = do
           if roDryRun opts
             then do
               logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-              TIO.putStrLn finalContent
+              let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
+              colorizeDiff diffs
               return $ Success ()
             else safeWriteCabal path finalContent
 

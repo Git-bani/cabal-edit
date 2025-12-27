@@ -17,6 +17,8 @@ import Data.List (sortOn)
 import Data.Ord (Down(..))
 import Control.Monad (foldM, forM)
 
+import Utils.Diff (diffLines, colorizeDiff)
+
 upgradeDependencies :: UpgradeOptions -> FilePath -> IO (Result ())
 upgradeDependencies opts path = do
   cfg <- loadConfig
@@ -61,7 +63,8 @@ upgradeDependencies opts path = do
                       if uoDryRun opts
                         then do
                           logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                          TIO.putStrLn newContent
+                          let diffs = diffLines (T.lines rawContent) (T.lines newContent)
+                          colorizeDiff diffs
                           return $ Success ()
                         else safeWriteCabal path newContent
                     else return $ Success ()

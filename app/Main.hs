@@ -121,6 +121,11 @@ addParser = AddCmd <$>
       ( long "if"
       <> metavar "CONDITION"
       <> help "Add dependency to a conditional block (e.g. 'os(windows)')" ))
+  <*> optional (T.pack <$> strOption
+      ( long "flag"
+      <> short 'f'
+      <> metavar "FLAG"
+      <> help "Add dependency conditional on a flag" ))
   <*> switch
       ( long "dev"
       <> short 'd'

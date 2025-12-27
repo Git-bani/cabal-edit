@@ -21,7 +21,7 @@ spec = describe "Business.SourceDep" $ do
             { aoPackageNames = ["foo"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Just "https://github.com/example/foo"
@@ -60,7 +60,7 @@ spec = describe "Business.SourceDep" $ do
             { aoPackageNames = ["bar"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing

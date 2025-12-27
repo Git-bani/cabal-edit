@@ -235,6 +235,7 @@ data AddOptions = AddOptions
   { aoVersion :: Maybe Text
   , aoSection :: SectionTarget
   , aoCondition :: Maybe Text
+  , aoFlag :: Maybe Text
   , aoDev :: Bool
   , aoDryRun :: Bool
   , aoGit :: Maybe Text

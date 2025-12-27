@@ -16,6 +16,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 
+import Utils.Diff (diffLines, colorizeDiff)
+
 addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Result ())
 addDependency maybeCtx opts path = do
   cfg <- loadConfig
@@ -43,7 +45,8 @@ addDependency maybeCtx opts path = do
               if aoDryRun opts
                 then do
                   logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                  TIO.putStrLn finalContent
+                  let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
+                  colorizeDiff diffs
                   return $ Success ()
                 else safeWriteCabal path finalContent
 
@@ -72,7 +75,13 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
           
           -- Determine target section/block
           let baseTarget = aoSection opts
-          let target = case aoCondition opts of
+          let condition = case aoCondition opts of
+                            Just c -> Just c
+                            Nothing -> case aoFlag opts of
+                                         Just f -> Just ("flag(" <> f <> ")")
+                                         Nothing -> Nothing
+
+          let target = case condition of
                          Nothing -> baseTarget
                          Just cond -> TargetConditional baseTarget cond
           

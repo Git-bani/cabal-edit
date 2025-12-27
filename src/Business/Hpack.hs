@@ -13,6 +13,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 
+import Utils.Diff (diffLines, colorizeDiff)
+
 addHpackDependency :: AddOptions -> FilePath -> IO (Result ())
 addHpackDependency opts path = do
   content <- TIO.readFile path
@@ -25,7 +27,8 @@ addHpackDependency opts path = do
       if aoDryRun opts
         then do
           logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-          TIO.putStrLn finalContent
+          let diffs = diffLines (T.lines content) (T.lines finalContent)
+          colorizeDiff diffs
           return $ Success ()
         else do
           -- Using safeWriteFile instead of safeWriteCabal as it doesn't need Cabal verification
@@ -70,7 +73,8 @@ removeHpackDependency opts path = do
   if roDryRun opts
     then do
       logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-      TIO.putStrLn finalContent
+      let diffs = diffLines (T.lines content) (T.lines finalContent)
+      colorizeDiff diffs
       return $ Success ()
     else do
       _ <- safeWriteFile path finalContent

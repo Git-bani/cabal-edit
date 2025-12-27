@@ -59,6 +59,21 @@ spec = do
         -- Ensure other deps remain
         T.unpack contentAfterRm `shouldContain` "base >=4.14"
 
+    it "Workflow: Add dependency with --flag" $ do
+      withTempProject basicCabalFile $ \_ cabalFile -> do
+        let run args = callProcess exePath args
+        
+        -- Define the flag first
+        run ["flag", "add", "enable-aeson"]
+        
+        -- Add dependency with flag condition
+        run ["add", "aeson", "--flag", "enable-aeson"]
+        
+        content <- TIO.readFile cabalFile
+        -- Should contain `if flag(enable-aeson)` block
+        T.unpack content `shouldContain` "if flag(enable-aeson)"
+        T.unpack content `shouldContain` "aeson"
+
     it "Workflow: Workspace Upgrade (Dry Run)" $ do
       withTempWorkspace $ \_ -> do
          let run args = callProcess exePath args
