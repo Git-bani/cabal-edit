@@ -63,3 +63,20 @@ spec = describe "Core.Serializer (Outliers)" $ do
       -- Should still have blank lines
       T.unpack result `shouldContain` "\n\n  build-depends:"
       T.unpack result `shouldContain` "\n\n  default-language:"
+
+  describe "updateDependencyLine (Outliers)" $ do
+    it "updates dependency with sub-library correctly" $ do
+      let content = "library\n  build-depends: my-pkg:sublib == 1.0"
+      let dep = Dependency (unsafeMkPackageName "my-pkg:sublib") (Just (ExactVersion (Version [2,0]))) BuildDepends
+      let result = updateDependencyLine "\n" True dep content
+      T.unpack result `shouldContain` "my-pkg:sublib ==2.0"
+      T.unpack result `shouldNotContain` "1.0"
+
+    it "handles dependency name that is a prefix of another" $ do
+      -- This tests that updating 'text' doesn't accidentally update 'text-conversions'
+      let content = "library\n  build-depends: text-conversions == 0.1, text == 1.2"
+      let dep = Dependency (unsafeMkPackageName "text") (Just (ExactVersion (Version [2,0]))) BuildDepends
+      let result = updateDependencyLine "\n" True dep content
+      T.unpack result `shouldContain` "text ==2.0"
+      T.unpack result `shouldContain` "text-conversions ==0.1"
+

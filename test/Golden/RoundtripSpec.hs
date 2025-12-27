@@ -10,7 +10,13 @@ import qualified Data.Text.IO as TIO
 import System.Directory (getCurrentDirectory, copyFile, removeFile)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
-import Control.Monad (forM_)
+import Control.Monad (when)
+import Test.Hspec.Hedgehog
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
+import qualified Data.Text as T
+import Core.Parser (parseCabalFile, findDependencies)
+import Data.List (sort)
 
 spec :: Spec
 spec = describe "Golden Roundtrip" $ do
@@ -49,8 +55,62 @@ spec = describe "Golden Roundtrip" $ do
         
         -- 3. Verify content match
         final <- TIO.readFile path
-        
         final `shouldBe` original
+
+    it ("is idempotent when adding " ++ fixture) $ do
+      withFixture fixture $ \path -> do
+        let addOpts = AddOptions 
+              { aoPackageNames = ["bytestring"]
+              , aoVersion = Just ">=0.10"
+              , aoSection = TargetLib
+              , aoCondition = Nothing, aoFlag = Nothing
+              , aoDev = False
+              , aoDryRun = False
+              , aoGit = Nothing
+              , aoTag = Nothing
+              , aoPath = Nothing
+              }
+        -- First add
+        _ <- addDependency Nothing addOpts path
+        content1 <- TIO.readFile path
+        
+        -- Second add (same)
+        _ <- addDependency Nothing addOpts path
+        content2 <- TIO.readFile path
+        
+        content2 `shouldBe` content1
+
+  it "Property: Add + Remove is semantic Identity on random names" $ hedgehog $ do
+    -- Use a dummy cabal file
+    let baseContent = "cabal-version: 3.0\nname: test\nversion: 0\nlibrary\n  build-depends: base\n"
+    pkgName <- forAll $ Gen.text (Range.linear 2 15) Gen.alphaNum
+    -- Skip 'base' to avoid confusion
+    when (pkgName /= "base") $ do
+      (originalDeps, finalDeps) <- evalIO $ do
+        cwd <- getCurrentDirectory
+        let path = cwd </> "prop_test.cabal"
+        TIO.writeFile path baseContent
+        
+        -- Get original deps
+        Success cf0 <- parseCabalFile path
+        let deps0 = sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf0)
+
+        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Nothing, aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing }
+        _ <- addDependency Nothing addOpts path
+        
+        let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roInteractive = False }
+        _ <- removeDependency rmOpts path
+        
+        -- Get final deps
+        Success cf1 <- parseCabalFile path
+        let deps1 = sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf1)
+
+        removeFile path
+        removeFile (path ++ ".bak")
+        return (deps0, deps1)
+      
+      finalDeps === originalDeps
+
 
 withFixture :: String -> (FilePath -> IO a) -> IO a
 withFixture name action = do
