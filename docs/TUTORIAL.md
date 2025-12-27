@@ -54,19 +54,13 @@ You can add a dependency directly to an `if` block using the `--if` flag:
 cabal-edit add Win32 --if "os(windows)"
 ```
 
-If the block doesn't exist within the targeted section, `cabal-edit` will create it for you at the end of that section.
-
-**Source Dependencies (Git & Local Path):**
-
-You can add dependencies from remote Git repositories or local directories. `cabal-edit` will automatically update your `cabal.project` file to include these sources.
+Alternatively, use the `--flag` shorthand to add a dependency conditional on a specific Cabal flag:
 
 ```bash
-# Add from a Git repository
-cabal-edit add my-pkg --git "https://github.com/user/my-pkg" --tag "v1.2.3"
-
-# Add from a local directory
-cabal-edit add internal-pkg --path "./libs/internal-pkg"
+cabal-edit add lens --flag use-lens
 ```
+
+If the conditional block doesn't exist within the targeted section, `cabal-edit` will create it for you at the end of that section.
 
 ### 2. Removing a Dependency
 
@@ -76,11 +70,15 @@ To remove a library:
 cabal-edit rm old-library
 ```
 
-You can also specify the section to remove from:
+### Interactive Removal
+
+You can visually select multiple dependencies to remove using the interactive mode:
 
 ```bash
-cabal-edit rm old-library --section test:unit-tests
+cabal-edit rm -i
 ```
+
+This opens a TUI checklist. Use **Arrow Keys** to navigate, **Space** to toggle, and **Enter** to confirm removal.
 
 ### 3. Upgrading Dependencies
 
@@ -98,13 +96,23 @@ Selective upgrades are supported via the interactive mode:
 cabal-edit upgrade -i
 ```
 
-Use the **Arrow Keys** to navigate, **Space** to toggle selection, and **Enter** to confirm.
-
 ## Advanced Features
 
 ### Managing Cabal Flags
 
-`cabal-edit` provides a dedicated command for managing flags in your `.cabal` file:
+`cabal-edit` provides a dashboard and commands for managing flags in your `.cabal` file:
+
+### Flag Dashboard
+
+Open a visual dashboard to toggle existing flags:
+
+```bash
+cabal-edit flag -i
+```
+
+This allows you to quickly switch flag defaults between `True` and `False` without hunting through the file.
+
+### CLI Flag Operations
 
 ```bash
 # Add a new flag (default: False, manual: True)
@@ -120,22 +128,16 @@ cabal-edit flag disable my-feature
 cabal-edit flag remove my-feature
 ```
 
-### Setting Project Version
-
-Update your package version without opening an editor:
-
-```bash
-cabal-edit set-version 1.0.0.0
-```
-
 ### Dry Runs & Safety
 
 **Dry Runs:**
-Preview changes without writing to disk by using the `--dry-run` flag. This is supported by all modifying commands (`add`, `rm`, `upgrade`, `set-version`, `flag`).
+Preview changes with **colorized diffs** without writing to disk by using the `--dry-run` flag. This is supported by all modifying commands (`add`, `rm`, `upgrade`, `set-version`, `flag`).
 
 ```bash
 cabal-edit add lens --dry-run
 ```
+
+The output will show a `git diff` style view, with removed lines in Red and added lines in Green.
 
 **Surgical Edits:**
 Unlike many tools that re-render the entire file (and lose your comments/formatting), `cabal-edit` performs "surgical" text edits. It identifies the exact lines to change and modifies them while keeping the rest of the file untouched.

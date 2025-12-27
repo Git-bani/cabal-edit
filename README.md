@@ -39,7 +39,10 @@ cabal-edit add hspec --section test-suite --dev
 # Add to a conditional block
 cabal-edit add Win32 --if "os(windows)"
 
-# Dry run (see changes without writing to disk)
+# Shorthand for flag-conditional dependencies
+cabal-edit add lens --flag use-lens
+
+# Dry run (see changes with colorized diffs)
 cabal-edit add lens --dry-run
 ```
 
@@ -48,6 +51,9 @@ cabal-edit add lens --dry-run
 ```bash
 # Remove a dependency
 cabal-edit rm old-package
+
+# Interactive mode (visually select dependencies to remove)
+cabal-edit rm -i
 
 # Remove from a specific section
 cabal-edit rm old-package --section executable:my-exe
@@ -62,7 +68,7 @@ cabal-edit upgrade
 # Interactive mode (select which packages to upgrade)
 cabal-edit upgrade -i
 
-# Dry run (see what would change)
+# Dry run (see colorized diff of proposed changes)
 cabal-edit upgrade --dry-run
 
 # Upgrade a specific package
@@ -79,6 +85,9 @@ cabal-edit set-version 1.2.3.0
 ### Flag Management
 
 ```bash
+# Open interactive flag dashboard (toggle flags visually)
+cabal-edit flag -i
+
 # Add a new flag
 cabal-edit flag add my-feature
 
@@ -117,10 +126,12 @@ cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 
 ## Features
 
-- ✅ **Smart Add**: Resolves latest versions from Hackage automatically.
+- ✅ **Smart Add**: Resolves latest versions from Hackage automatically (with offline fallback).
 - ✅ **Surgical Remove**: Safely removes dependencies while preserving file structure.
 - ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
-- ✅ **Flag Management**: Easily add, enable, or disable Cabal flags.
+- ✅ **Flag Dashboard**: Visual TUI to toggle Cabal flags interactively.
+- ✅ **Interactive Removal**: Checklist-style selection for removing multiple packages.
+- ✅ **Colorized Diffs**: `git diff`-style visual previews for all dry-run operations.
 - ✅ **Version Management**: Set project version from the CLI.
 - ✅ **Hpack Support**: Automatically detects and edits `package.yaml` files when present.
 - ✅ **Workspace Support**: Full support for `cabal.project` and multi-package setups.
