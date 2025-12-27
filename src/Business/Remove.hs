@@ -63,7 +63,7 @@ processPackageRemove opts eol leadingComma cabalFile (Success currentContent) pk
   case mkPackageName pkgNameText of
     Left err -> return $ Failure $ Error err InvalidDependency
     Right pkgName -> do
-      let dep = Dependency { depName = pkgName, depAlias = Nothing, depVersionConstraint = Nothing, depType = BuildDepends }
+      let dep = Dependency { depName = pkgName, depVersionConstraint = Nothing, depType = BuildDepends }
       
       -- Determine which sections to remove from
       let targets = case roSection opts of

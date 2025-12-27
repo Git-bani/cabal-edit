@@ -11,6 +11,7 @@ import qualified Data.Text.IO as TIO
 import System.Directory (getCurrentDirectory, removeFile)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
+import Data.List (find)
 
 import Test.Hspec.Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -160,8 +161,9 @@ genDependencies = Gen.list (Range.linear 1 5) genDependency
 genDependency :: Gen Dependency
 genDependency = do
   name <- genPackageName
+  
   ver <- Gen.maybe genVersionConstraint
-  return $ Dependency name Nothing ver BuildDepends
+  return $ Dependency name ver BuildDepends
 
 genPackageName :: Gen PackageName
 genPackageName = do

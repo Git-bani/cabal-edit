@@ -164,7 +164,6 @@ data Benchmark = Benchmark
 -- Dependency representation
 data Dependency = Dependency
   { depName :: PackageName
-  , depAlias :: Maybe Text
   , depVersionConstraint :: Maybe VersionConstraint
   , depType :: DependencyType
   } deriving (Show, Eq, Generic, NFData)
@@ -238,7 +237,6 @@ data AddOptions = AddOptions
   , aoSection :: SectionTarget
   , aoCondition :: Maybe Text
   , aoFlag :: Maybe Text
-  , aoRename :: Maybe Text
   , aoDev :: Bool
   , aoDryRun :: Bool
   , aoGit :: Maybe Text

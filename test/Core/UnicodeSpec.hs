@@ -32,7 +32,7 @@ spec = describe "Core.Unicode" $ do
       let opts = AddOptions 
             { aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing

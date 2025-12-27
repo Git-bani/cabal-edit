@@ -74,16 +74,6 @@ spec = do
         T.unpack content `shouldContain` "if flag(enable-aeson)"
         T.unpack content `shouldContain` "aeson"
 
-    it "Workflow: Add dependency with --rename" $ do
-      withTempProject basicCabalFile $ \_ cabalFile -> do
-        let run args = callProcess exePath args
-        
-        -- Add dependency with rename (alias)
-        run ["add", "aeson", "--rename", "json"]
-        
-        content <- TIO.readFile cabalFile
-        T.unpack content `shouldContain` "json:aeson"
-
     it "Workflow: Workspace Upgrade (Dry Run)" $ do
       withTempWorkspace $ \_ -> do
          let run args = callProcess exePath args
@@ -95,7 +85,7 @@ spec = do
          
          -- Verify files are unchanged (simple check)
          -- In a real scenario we'd check timestamps or content hash
-         return () 
+         return ()
 
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
@@ -104,7 +94,7 @@ trim = dropWhileEnd isSpace . dropWhile isSpace
 
 basicCabalFile :: Text
 basicCabalFile = T.unlines
-  ["cabal-version:      3.0"
+  ["cabal-version:      2.4"
   ,"name:               integration-test"
   ,"version:            0.1.0.0"
   ,""

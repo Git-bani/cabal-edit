@@ -133,13 +133,9 @@ parseFlagFields content (TextSpan (TextOffset start) (TextOffset end)) =
       in s == "true" || s == "yes"
 
 parseCommonDeps :: Text -> TextSpan -> [Dependency]
-parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
+parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) = 
   let sectionContent = T.take (end - start) (T.drop start content)
       ls = T.lines sectionContent
-      -- Find build-depends block
-      -- This is a simplified parser: it assumes standard formatting or finds "build-depends:"
-      -- and consumes indented lines.
-      -- Reusing logic similar to Serializer would be best but for now let's do a quick extraction.
       maybeBuildDepends = findIndexMatches "build-depends:" ls
   in case maybeBuildDepends of
        Nothing -> []
@@ -151,12 +147,8 @@ parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
                  let (_, val) = T.breakOn ":" header
                      firstLineVal = T.strip $ T.drop 1 val
                      
-                     -- Collect indented lines
                      indented = takeWhile isIndented body
                      
-                     -- Parse the dependencies from the lines
-                     -- We construct a single string to split by comma, handling line continuations implicitly
-                     -- Actually, simpler: join all relevant lines, remove newlines, split by comma.
                      allLines = if T.null firstLineVal then indented else firstLineVal : indented
                      fullStr = T.intercalate " " (map T.strip allLines)
                      
@@ -177,24 +169,12 @@ parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
         let s = T.strip t
         in if T.null s then Nothing 
            else 
-             let (fullPart, _) = T.break isSpace s
-             in if ":" `T.isInfixOf` fullPart
-                then
-                  let (alias, rest) = T.breakOn ":" fullPart
-                      name = T.drop 1 rest
-                  in Just $ Dependency 
-                       { depName = unsafeMkPackageName (T.strip name)
-                       , depAlias = Just (T.strip alias)
-                       , depVersionConstraint = Nothing 
-                       , depType = BuildDepends 
-                       }
-                else
-                  Just $ Dependency 
-                       { depName = unsafeMkPackageName (T.strip fullPart)
-                       , depAlias = Nothing
-                       , depVersionConstraint = Nothing 
-                       , depType = BuildDepends 
-                       }
+             let (name, _) = T.break isSpace s
+             in Just $ Dependency 
+                  { depName = unsafeMkPackageName (T.strip name)
+                  , depVersionConstraint = Nothing 
+                  , depType = BuildDepends 
+                  }
 
 -- Extract library section
 extractLibrary :: GPD.GenericPackageDescription -> Text -> Maybe Section
@@ -284,7 +264,6 @@ cabalDepToInternal (CabalDep.Dependency pkgName versionRange _) =
   Dependency
     {
      depName = unsafeMkPackageName $ T.pack $ PN.unPackageName pkgName
-    , depAlias = Nothing
     , depVersionConstraint = Just $ versionRangeToConstraint versionRange
     , depType = BuildDepends
     }
@@ -306,9 +285,7 @@ resolveTargetBounds target cabalFile currentContent =
               TextSpan (TextOffset cStart) (TextOffset cEnd) = findConditionalPosition condition secContent
           in if cStart == 0 && cEnd == 0
              then 
-               -- Block not found, create it at the end of the section
                let bIndent = detectBaseIndent' secContent
-                   -- Ensure section content ends with a newline before appending
                    prefixStr = if T.null secContent || T.last secContent == '\n' then "" else "\n"
                    newBlock = prefixStr <> "\n" <> T.replicate bIndent " " <> "if " <> condition <> "\n"
                in Right (sEnd, sEnd, newBlock, "")
@@ -354,10 +331,8 @@ findConditionalPosition condition sectionText =
        Nothing -> TextSpan 0 0
        Just (lineIdx, line) ->
          let startOffset = T.length $ T.unlines $ map snd $ take lineIdx ls
-             -- Include the newline if not first line
              actualStart = if startOffset == 0 then 0 else startOffset + 1
              
-             -- Find block end
              indent = T.length $ T.takeWhile (== ' ') line
              restLines = map snd $ drop (lineIdx + 1) ls
              (body, _) = span (\l -> T.null (T.strip l) || T.length (T.takeWhile (== ' ') l) > indent) restLines
@@ -411,14 +386,14 @@ findSectionStart target = go 0 0
     scan :: Int -> Int -> Bool -> Text -> Text -> (Int, Maybe Int)
     scan idx nesting seenContent l lowerL
       | T.null l = (nesting, Nothing)
-      | nesting > 0 =
+      | nesting > 0 = 
           if "{-" `T.isPrefixOf` l then
              scan (idx + 2) (nesting + 1) seenContent (T.drop 2 l) (T.drop 2 lowerL)
           else if "-}" `T.isPrefixOf` l then
              scan (idx + 2) (nesting - 1) seenContent (T.drop 2 l) (T.drop 2 lowerL)
           else
              scan (idx + 1) nesting seenContent (T.tail l) (T.tail lowerL)
-      | otherwise =
+      | otherwise = 
           -- Nesting 0
           if "--" `T.isPrefixOf` l then (nesting, Nothing)
           else if "{-" `T.isPrefixOf` l then
