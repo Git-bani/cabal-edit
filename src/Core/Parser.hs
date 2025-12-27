@@ -177,12 +177,24 @@ parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
         let s = T.strip t
         in if T.null s then Nothing 
            else 
-             let (name, _) = T.break isSpace s
-             in Just $ Dependency 
-                  { depName = unsafeMkPackageName (T.strip name)
-                  , depVersionConstraint = Nothing 
-                  , depType = BuildDepends 
-                  }
+             let (fullPart, _) = T.break isSpace s
+             in if ":" `T.isInfixOf` fullPart
+                then
+                  let (alias, rest) = T.breakOn ":" fullPart
+                      name = T.drop 1 rest
+                  in Just $ Dependency 
+                       { depName = unsafeMkPackageName (T.strip name)
+                       , depAlias = Just (T.strip alias)
+                       , depVersionConstraint = Nothing 
+                       , depType = BuildDepends 
+                       }
+                else
+                  Just $ Dependency 
+                       { depName = unsafeMkPackageName (T.strip fullPart)
+                       , depAlias = Nothing
+                       , depVersionConstraint = Nothing 
+                       , depType = BuildDepends 
+                       }
 
 -- Extract library section
 extractLibrary :: GPD.GenericPackageDescription -> Text -> Maybe Section
@@ -272,6 +284,7 @@ cabalDepToInternal (CabalDep.Dependency pkgName versionRange _) =
   Dependency
     {
      depName = unsafeMkPackageName $ T.pack $ PN.unPackageName pkgName
+    , depAlias = Nothing
     , depVersionConstraint = Just $ versionRangeToConstraint versionRange
     , depType = BuildDepends
     }

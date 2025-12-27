@@ -131,6 +131,11 @@ addParser = AddCmd <$>
       <> short 'f'
       <> metavar "FLAG"
       <> help "Add dependency conditional on a flag" ))
+  <*> optional (T.pack <$> strOption
+      ( long "rename"
+      <> short 'r'
+      <> metavar "ALIAS"
+      <> help "Rename the dependency (Cabal mixins)" ))
   <*> switch
       ( long "dev"
       <> short 'd'

@@ -91,6 +91,7 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
               -- Create dependency
               let dep = Dependency
                     { depName = pkgName
+                    , depAlias = aoRename opts
                     , depVersionConstraint = Just constraint
                     , depType = if aoDev opts then TestDepends else BuildDepends
                     }

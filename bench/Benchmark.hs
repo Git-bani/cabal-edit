@@ -33,7 +33,7 @@ sampleDep :: Dependency
 sampleDep = Dependency (unsafeMkPackageName "new-package") (Just (MajorBoundVersion (Version [1,2,3]))) BuildDepends
 
 duplicateDep :: Dependency
-duplicateDep = Dependency (unsafeMkPackageName "base") Nothing BuildDepends
+duplicateDep = Dependency (unsafeMkPackageName "base") Nothing Nothing BuildDepends
 
 dummyCabal :: CabalFile
 dummyCabal = CabalFile 

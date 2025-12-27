@@ -11,8 +11,8 @@ spec :: Spec
 spec = describe "Trailing Comma Support" $ do
   
   it "formats dependency list with trailing commas" $ do
-    let deps = [ Dependency (unsafeMkPackageName "package-a") Nothing BuildDepends
-               , Dependency (unsafeMkPackageName "package-b") Nothing BuildDepends
+    let deps = [ Dependency (unsafeMkPackageName "package-a") Nothing Nothing BuildDepends
+               , Dependency (unsafeMkPackageName "package-b") Nothing Nothing BuildDepends
                ]
     -- Use leadingComma = False
     let result = formatDependencyList "\n" False deps 2
@@ -26,7 +26,7 @@ spec = describe "Trailing Comma Support" $ do
           , "  build-depends:"
           , "    base,"
           ]
-    let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+    let dep = Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends
     let result = insertDependencyLine "\n" False dep content
     
     T.unpack result `shouldContain` "base,"
@@ -36,7 +36,7 @@ spec = describe "Trailing Comma Support" $ do
     
   it "handles adding first dependency in trailing comma style" $ do
     let content = "library\n  build-depends:\n"
-    let dep = Dependency (unsafeMkPackageName "base") Nothing BuildDepends
+    let dep = Dependency (unsafeMkPackageName "base") Nothing Nothing BuildDepends
     let result = insertDependencyLine "\n" False dep content
     
     -- Should not have any comma if it's the only one

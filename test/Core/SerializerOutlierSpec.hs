@@ -13,7 +13,7 @@ spec = describe "Core.Serializer (Outliers)" $ do
   describe "insertDependencyLine" $ do
     it "handles file with no newline at EOF" $ do
       let content = "library\n  build-depends: base" -- No newline
-      let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+      let dep = Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends
       let result = insertDependencyLine "\n" True dep content
       -- Should append correctly without merging lines
       T.unpack result `shouldContain` "base"
@@ -22,7 +22,7 @@ spec = describe "Core.Serializer (Outliers)" $ do
 
     it "handles completely empty build-depends" $ do
       let content = "library\n  build-depends:"
-      let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+      let dep = Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends
       let result = insertDependencyLine "\n" True dep content
       T.unpack result `shouldContain` "text"
 
@@ -30,7 +30,7 @@ spec = describe "Core.Serializer (Outliers)" $ do
       -- Current implementation splits by '\n', so CRLF becomes "line\r".
       -- This might be tricky. Let's see behavior.
       let content = "library\r\n  build-depends: base\r\n"
-      let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+      let dep = Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends
       let result = insertDependencyLine "\r\n" True dep content
       
       T.unpack result `shouldContain` "text"
@@ -38,7 +38,7 @@ spec = describe "Core.Serializer (Outliers)" $ do
 
     it "inserts into section with comments only" $ do
       let content = "library\n  -- Just a comment\n"
-      let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+      let dep = Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends
       let result = insertDependencyLine "\n" True dep content
       
       T.unpack result `shouldContain` "build-depends:"
@@ -49,7 +49,7 @@ spec = describe "Core.Serializer (Outliers)" $ do
   describe "replaceBuildDependsBlock" $ do
     it "replaces block when only one dependency exists" $ do
       let content = "library\n  build-depends: base"
-      let newDeps = [Dependency (unsafeMkPackageName "text") Nothing BuildDepends]
+      let newDeps = [Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends]
       let result = replaceBuildDependsBlock "\n" True newDeps content
       
       T.unpack result `shouldContain` "text"
@@ -57,7 +57,7 @@ spec = describe "Core.Serializer (Outliers)" $ do
 
     it "replaces block keeping surrounding whitespace" $ do
       let content = "library\n\n  build-depends: base\n\n  default-language: Haskell2010"
-      let newDeps = [Dependency (unsafeMkPackageName "text") Nothing BuildDepends]
+      let newDeps = [Dependency (unsafeMkPackageName "text") Nothing Nothing BuildDepends]
       let result = replaceBuildDependsBlock "\n" True newDeps content
       
       -- Should still have blank lines

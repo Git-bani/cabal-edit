@@ -161,7 +161,7 @@ genDependency :: Gen Dependency
 genDependency = do
   name <- genPackageName
   ver <- Gen.maybe genVersionConstraint
-  return $ Dependency name ver BuildDepends
+  return $ Dependency name Nothing ver BuildDepends
 
 genPackageName :: Gen PackageName
 genPackageName = do

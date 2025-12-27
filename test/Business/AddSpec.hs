@@ -21,7 +21,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["aeson"]
             , aoVersion = Just "==2.0.0.0"
             , aoSection = TargetLib -- defaults to library
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -45,7 +45,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["mtl"]
             , aoVersion = Just "==2.2.2"
             , aoSection = TargetLib
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -65,7 +65,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["hspec"]
             , aoVersion = Just ">=2.8"
             , aoSection = TargetNamed "my-test"
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = True
             , aoDryRun = False
             , aoGit = Nothing
@@ -86,7 +86,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["hspec"]
             , aoVersion = Just ">=2.8"
             , aoSection = TargetNamed "non-existent-section"
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = True
             , aoDryRun = False
             , aoGit = Nothing
@@ -103,7 +103,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["text"]
             , aoVersion = Just "==1.2.4.1"
             , aoSection = TargetLib
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -126,7 +126,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["aeson"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -147,7 +147,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["bytestring", "vector"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Nothing, aoFlag = Nothing
+            , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -172,7 +172,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["directory"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Just "os(windows)", aoFlag = Nothing
+            , aoCondition = Just "os(windows)", aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -190,7 +190,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["unix"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Just "os(linux)", aoFlag = Nothing
+            , aoCondition = Just "os(linux)", aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -208,7 +208,7 @@ spec = describe "Business.Add" $ do
             { aoPackageNames = ["Win32"]
             , aoVersion = Nothing
             , aoSection = TargetLib
-            , aoCondition = Just "os(windows)", aoFlag = Nothing
+            , aoCondition = Just "os(windows)", aoFlag = Nothing, aoRename = Nothing
             , aoDev = False
             , aoDryRun = False
             , aoGit = Nothing
@@ -234,7 +234,7 @@ spec = describe "Business.Add" $ do
               { aoPackageNames = ["aeson"]
               , aoVersion = Nothing
               , aoSection = TargetLib
-              , aoCondition = Nothing, aoFlag = Nothing
+              , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
               , aoDev = False
               , aoDryRun = False
               , aoGit = Nothing
@@ -258,7 +258,7 @@ spec = describe "Business.Add" $ do
               { aoPackageNames = ["text"]
               , aoVersion = Just "==2.0"
               , aoSection = TargetLib
-              , aoCondition = Nothing, aoFlag = Nothing
+              , aoCondition = Nothing, aoFlag = Nothing, aoRename = Nothing
               , aoDev = False
               , aoDryRun = False
               , aoGit = Nothing
@@ -292,6 +292,7 @@ spec = describe "Business.Add" $ do
               , aoVersion = Nothing
               , aoSection = TargetLib
               , aoCondition = Nothing, aoFlag = Just "enable-lens"
+              , aoRename = Nothing
               , aoDev = False
               , aoDryRun = False
               , aoGit = Nothing
@@ -312,6 +313,7 @@ spec = describe "Business.Add" $ do
               , aoVersion = Nothing
               , aoSection = TargetLib
               , aoCondition = Just "os(linux)", aoFlag = Just "ignored-flag"
+              , aoRename = Nothing
               , aoDev = False
               , aoDryRun = False
               , aoGit = Nothing

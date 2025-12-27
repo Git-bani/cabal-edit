@@ -20,7 +20,7 @@ spec = describe "Core.Serializer (Complex)" $ do
           , "    build-depends: extra"
           ]
     
-    let dep = Dependency (unsafeMkPackageName "aeson") (Just (ExactVersion (Version [2,0]))) BuildDepends
+    let dep = Dependency (unsafeMkPackageName "aeson") Nothing (Just (ExactVersion (Version [2,0]))) BuildDepends
     let result = insertDependencyLine "\n" True dep content
     
     -- It should add to the first build-depends (main block)
@@ -39,7 +39,7 @@ spec = describe "Core.Serializer (Complex)" $ do
           , "    build-depends: extra"
           ]
     
-    let dep = Dependency (unsafeMkPackageName "aeson") (Just (ExactVersion (Version [2,0]))) BuildDepends
+    let dep = Dependency (unsafeMkPackageName "aeson") Nothing (Just (ExactVersion (Version [2,0]))) BuildDepends
     let result = insertDependencyLine "\n" True dep content
     
     -- Current behavior check:
@@ -65,7 +65,7 @@ spec = describe "Core.Serializer (Complex)" $ do
           , "  build-depends: text"
           ]
           
-    let dep = Dependency (unsafeMkPackageName "aeson") (Just (ExactVersion (Version [2,0]))) BuildDepends
+    let dep = Dependency (unsafeMkPackageName "aeson") Nothing (Just (ExactVersion (Version [2,0]))) BuildDepends
     let result = insertDependencyLine "\n" True dep sectionContent
     
     T.unpack result `shouldContain` "aeson ==2.0"

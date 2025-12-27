@@ -52,6 +52,7 @@ processHpackPackage opts (Success currentContent) pkgNameText = do
         Success constraint -> do
           let dep = Dependency
                 { depName = pkgName
+                , depAlias = Nothing
                 , depVersionConstraint = Just constraint
                 , depType = if aoDev opts then TestDepends else BuildDepends
                 }
@@ -79,7 +80,7 @@ removeHpackDependency opts path = do
         case mkPackageName pkgNameText of
           Left _ -> acc
           Right pkgName -> 
-            let dep = Dependency { depName = pkgName, depVersionConstraint = Nothing, depType = BuildDepends }
+            let dep = Dependency { depName = pkgName, depAlias = Nothing, depVersionConstraint = Nothing, depType = BuildDepends }
             in updateHpackDependencies acc [dep] Remove
         ) content packageNames
   
