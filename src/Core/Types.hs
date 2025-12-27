@@ -248,6 +248,7 @@ data AddOptions = AddOptions
 data RemoveOptions = RemoveOptions
   { roSection :: SectionTarget
   , roDryRun :: Bool
+  , roInteractive :: Bool
   , roPackageNames :: [Text]
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)

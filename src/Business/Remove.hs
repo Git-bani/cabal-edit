@@ -13,7 +13,9 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 
+import Utils.Terminal (selectItems)
 import Utils.Diff (diffLines, colorizeDiff)
+import Data.List (nub)
 
 removeDependency :: RemoveOptions -> FilePath -> IO (Result ())
 removeDependency opts path = do
@@ -25,22 +27,35 @@ removeDependency opts path = do
   case parseResult of
     Failure err -> return $ Failure err
     Success cabalFile -> do
-      -- 2. Process each package
-      let eol = cfLineEndings cabalFile
-      let initialContent = cfRawContent cabalFile
-      
-      finalContentResult <- foldM (processPackageRemove opts eol leadingComma cabalFile) (Success initialContent) (roPackageNames opts)
-      
-      case finalContentResult of
-        Failure err -> return $ Failure err
-        Success finalContent -> 
-          if roDryRun opts
-            then do
-              logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-              let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
-              colorizeDiff diffs
-              return $ Success ()
-            else safeWriteCabal path finalContent
+      -- 2. Handle interactive mode
+      packageNames <- if roInteractive opts
+        then do
+          let allDeps = concatMap findDependencies (cfSections cabalFile)
+          let uniqueNames = nub $ map (unPackageName . depName) allDeps
+          if null uniqueNames
+            then return []
+            else selectItems "Select dependencies to remove:" uniqueNames
+        else return (roPackageNames opts)
+
+      if null packageNames && not (null (roPackageNames opts) && not (roInteractive opts))
+        then return $ Success () -- Nothing to do
+        else do
+          -- 3. Process each package
+          let eol = cfLineEndings cabalFile
+          let initialContent = cfRawContent cabalFile
+          
+          finalContentResult <- foldM (processPackageRemove opts eol leadingComma cabalFile) (Success initialContent) packageNames
+          
+          case finalContentResult of
+            Failure err -> return $ Failure err
+            Success finalContent -> 
+              if roDryRun opts
+                then do
+                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                  let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
+                  colorizeDiff diffs
+                  return $ Success ()
+                else safeWriteCabal path finalContent
 
 processPackageRemove :: RemoveOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
 processPackageRemove _ _ _ _ (Failure err) _ = return $ Failure err

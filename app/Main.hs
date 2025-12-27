@@ -160,7 +160,11 @@ removeParser = RemoveCmd <$>
   <*> switch
       ( long "dry-run"
       <> help "Don't write changes" )
-  <*> some (T.pack <$> argument str (metavar "PACKAGE"))
+  <*> switch
+      ( long "interactive"
+      <> short 'i'
+      <> help "Select dependencies to remove interactively" )
+  <*> many (T.pack <$> argument str (metavar "PACKAGE"))
   )
 
 upgradeParser :: Parser Command

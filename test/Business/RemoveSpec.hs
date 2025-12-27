@@ -20,7 +20,7 @@ spec = describe "Business.Remove" $ do
       let opts = RemoveOptions 
             { roPackageNames = ["text"]
             , roSection = TargetLib
-            , roDryRun = False
+            , roDryRun = False, roInteractive = False
             }
       
       result <- removeDependency opts path
@@ -35,7 +35,7 @@ spec = describe "Business.Remove" $ do
       let opts = RemoveOptions 
             { roPackageNames = ["non-existent-pkg"]
             , roSection = TargetLib
-            , roDryRun = False
+            , roDryRun = False, roInteractive = False
             }
       
       result <- removeDependency opts path
@@ -49,7 +49,7 @@ spec = describe "Business.Remove" $ do
       let opts = RemoveOptions 
             { roPackageNames = ["hspec"]
             , roSection = TargetTest (Just "my-test")
-            , roDryRun = False
+            , roDryRun = False, roInteractive = False
             }
       
       result <- removeDependency opts path
@@ -63,7 +63,7 @@ spec = describe "Business.Remove" $ do
       let opts = RemoveOptions 
             { roPackageNames = ["base", "text"]
             , roSection = TargetLib
-            , roDryRun = False
+            , roDryRun = False, roInteractive = False
             }
       
       result <- removeDependency opts path
@@ -80,7 +80,7 @@ spec = describe "Business.Remove" $ do
       let opts = RemoveOptions 
             { roPackageNames = ["hspec"]
             , roSection = TargetLib
-            , roDryRun = False
+            , roDryRun = False, roInteractive = False
             }
       
       result <- removeDependency opts path
@@ -100,7 +100,7 @@ spec = describe "Business.Remove" $ do
         let opts = RemoveOptions 
               { roPackageNames = ["Win32"]
               , roSection = TargetLib
-              , roDryRun = False
+              , roDryRun = False, roInteractive = False
               }
         result <- removeDependency opts path
         result `shouldSatisfy` isSuccess
@@ -118,7 +118,7 @@ spec = describe "Business.Remove" $ do
         let opts = RemoveOptions 
               { roPackageNames = ["base"]
               , roSection = TargetLib
-              , roDryRun = False
+              , roDryRun = False, roInteractive = False
               }
         result <- removeDependency opts path
         result `shouldSatisfy` isSuccess

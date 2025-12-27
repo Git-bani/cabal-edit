@@ -8,12 +8,14 @@ import Core.Serializer (DependencyOperation(..))
 import Core.Safety
 import Core.DependencyResolver
 import Utils.Logging (logInfo)
+import Utils.Terminal (selectItems)
+import Utils.Diff (diffLines, colorizeDiff)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
-
-import Utils.Diff (diffLines, colorizeDiff)
+import Data.List (nub)
+import Data.Maybe (mapMaybe)
 
 addHpackDependency :: AddOptions -> FilePath -> IO (Result ())
 addHpackDependency opts path = do
@@ -62,13 +64,24 @@ removeHpackDependency :: RemoveOptions -> FilePath -> IO (Result ())
 removeHpackDependency opts path = do
   content <- TIO.readFile path
   
+  -- Handle interactive mode
+  packageNames <- if roInteractive opts
+    then do
+      -- Crude extraction of dependencies from package.yaml
+      let ls = T.lines content
+      let deps = extractHpackDeps ls
+      if null deps
+        then return []
+        else selectItems "Select dependencies to remove (Hpack):" (nub deps)
+    else return (roPackageNames opts)
+
   let finalContent = foldr (\pkgNameText acc -> 
         case mkPackageName pkgNameText of
           Left _ -> acc
           Right pkgName -> 
             let dep = Dependency { depName = pkgName, depVersionConstraint = Nothing, depType = BuildDepends }
             in updateHpackDependencies acc [dep] Remove
-        ) content (roPackageNames opts)
+        ) content packageNames
   
   if roDryRun opts
     then do
@@ -79,3 +92,9 @@ removeHpackDependency opts path = do
     else do
       _ <- safeWriteFile path finalContent
       return $ Success ()
+
+extractHpackDeps :: [Text] -> [Text]
+extractHpackDeps ls = 
+  let isDepLine l = "-" `T.isPrefixOf` T.strip l
+      getPkg l = T.words (T.drop 1 (T.strip l))
+  in mapMaybe (\l -> case getPkg l of (p:_) -> Just p; _ -> Nothing) (filter isDepLine ls)

@@ -41,7 +41,7 @@ spec = describe "Golden Roundtrip" $ do
         let rmOpts = RemoveOptions
               { roPackageNames = ["containers"]
               , roSection = TargetLib
-              , roDryRun = False
+              , roDryRun = False, roInteractive = False
               }
               
         resRm <- removeDependency rmOpts path
