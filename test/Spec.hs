@@ -4,6 +4,7 @@ import Test.Hspec
 
 import qualified Business.AddSpec
 import qualified Business.RemoveSpec
+import qualified Business.UpgradeSpec
 import qualified Business.SubLibrarySpec
 import qualified Business.ValidationSpec
 import qualified Business.SetVersionSpec
@@ -25,11 +26,13 @@ import qualified Integration.EndToEndSpec
 import qualified Integration.WorkspaceSpec
 import qualified Integration.HpackSpec
 import qualified Utils.ConfigSpec
+import qualified Utils.DiffSpec
 
 main :: IO ()
 main = hspec $ do
   describe "Business.Add" Business.AddSpec.spec
   describe "Business.Remove" Business.RemoveSpec.spec
+  describe "Business.Upgrade" Business.UpgradeSpec.spec
   describe "Business.SubLibrary" Business.SubLibrarySpec.spec
   describe "Business.Validation" Business.ValidationSpec.spec
   describe "Business.SetVersion" Business.SetVersionSpec.spec
@@ -51,3 +54,4 @@ main = hspec $ do
   describe "Integration.Workspace" Integration.WorkspaceSpec.spec
   describe "Integration.Hpack" Integration.HpackSpec.spec
   describe "Utils.Config" Utils.ConfigSpec.spec
+  describe "Utils.Diff" Utils.DiffSpec.spec

@@ -175,8 +175,12 @@ genDependencies = Gen.list (Range.linear 1 10) genDependency
 genPackageName :: Gen PackageName
 genPackageName = do
   first <- Gen.alpha
-  rest <- Gen.text (Range.linear 1 20) (Gen.choice [Gen.alphaNum, pure '-'])
-  return $ unsafeMkPackageName (T.cons first rest)
+  middle <- Gen.text (Range.linear 0 20) (Gen.choice [Gen.alphaNum, pure '-'])
+  lastC <- Gen.alphaNum
+  let name = T.cons first (middle <> T.singleton lastC)
+  if "--" `T.isInfixOf` name
+    then genPackageName
+    else return $ unsafeMkPackageName name
 
 genVersionConstraint :: Gen VersionConstraint
 genVersionConstraint = Gen.choice

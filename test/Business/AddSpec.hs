@@ -220,6 +220,111 @@ spec = describe "Business.Add" $ do
       T.unpack content `shouldContain` "if os(windows)"
       T.unpack content `shouldContain` "Win32"
 
+  describe "Business.Add (Outliers)" $ do
+    it "handles weird indentation gracefully" $ do
+      let weirdCabal = T.unlines
+            [ "cabal-version: 2.4", "name: weird", "version: 0.1", "library"
+            , "  exposed-modules: Lib"
+            , "  build-depends:"
+            , "   base" -- 3 spaces
+            , "   , text"
+            ]
+      withTempCabalFile weirdCabal $ \path -> do
+        let opts = AddOptions 
+              { aoPackageNames = ["aeson"]
+              , aoVersion = Nothing
+              , aoSection = TargetLib
+              , aoCondition = Nothing, aoFlag = Nothing
+              , aoDev = False
+              , aoDryRun = False
+              , aoGit = Nothing
+              , aoTag = Nothing
+              , aoPath = Nothing
+              }
+        result <- addDependency Nothing opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        -- Should insert aligned with existing
+        T.unpack content `shouldContain` "aeson"
+
+    it "does not confuse 'text' with 'text-conversions'" $ do
+      let partialMatchCabal = T.unlines
+            [ "cabal-version: 2.4", "name: partial", "version: 0.1", "library"
+            , "  build-depends: base, text-conversions"
+            ]
+      withTempCabalFile partialMatchCabal $ \path -> do
+        let opts = AddOptions 
+              { aoPackageNames = ["text"]
+              , aoVersion = Just "==2.0"
+              , aoSection = TargetLib
+              , aoCondition = Nothing, aoFlag = Nothing
+              , aoDev = False
+              , aoDryRun = False
+              , aoGit = Nothing
+              , aoTag = Nothing
+              , aoPath = Nothing
+              }
+        result <- addDependency Nothing opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        -- Should add 'text' separately
+        T.unpack content `shouldContain` "text ==2.0"
+        T.unpack content `shouldContain` "text-conversions"
+        -- Ensure we didn't accidentally edit text-conversions
+        T.unpack content `shouldNotContain` "text-conversions ==2.0"
+
+    it "supports adding with --flag option" $ do
+      let cabalWithFlag = T.unlines
+            [ "cabal-version: 2.4", "name: flag-test", "version: 0.1", "library"
+            , "  exposed-modules: Lib"
+            , "  build-depends: base"
+            , ""
+            , "flag enable-lens"
+            , "  description: Enable lens support"
+            , "  manual: True"
+            , "  default: False"
+            ]
+      withTempCabalFile cabalWithFlag $ \path -> do
+        let opts = AddOptions 
+              { aoPackageNames = ["lens"]
+              , aoVersion = Nothing
+              , aoSection = TargetLib
+              , aoCondition = Nothing, aoFlag = Just "enable-lens"
+              , aoDev = False
+              , aoDryRun = False
+              , aoGit = Nothing
+              , aoTag = Nothing
+              , aoPath = Nothing
+              }
+        result <- addDependency Nothing opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        T.unpack content `shouldContain` "if flag(enable-lens)"
+        T.unpack content `shouldContain` "lens"
+
+    it "prioritizes explicit condition over flag" $ do
+      withTempCabalFile basicCabalFile $ \path -> do
+        let opts = AddOptions 
+              { aoPackageNames = ["lens"]
+              , aoVersion = Nothing
+              , aoSection = TargetLib
+              , aoCondition = Just "os(linux)", aoFlag = Just "ignored-flag"
+              , aoDev = False
+              , aoDryRun = False
+              , aoGit = Nothing
+              , aoTag = Nothing
+              , aoPath = Nothing
+              }
+        result <- addDependency Nothing opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        T.unpack content `shouldContain` "if os(linux)"
+        T.unpack content `shouldNotContain` "flag(ignored-flag)"
+
 basicCabalFile :: Text
 basicCabalFile = T.unlines
   [ "cabal-version:      2.4"

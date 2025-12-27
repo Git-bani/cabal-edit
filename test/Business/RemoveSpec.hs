@@ -89,6 +89,47 @@ spec = describe "Business.Remove" $ do
       content <- TIO.readFile path
       T.unpack content `shouldNotContain` "hspec"
 
+  describe "Business.Remove (Outliers)" $ do
+    it "removes dependency from conditional block" $ do
+      let cabalWithIf = T.unlines
+            [ "cabal-version: 2.4", "name: if-test", "version: 0.1", "library"
+            , "  if os(windows)"
+            , "    build-depends: Win32, base"
+            ]
+      withTempCabalFile cabalWithIf $ \path -> do
+        let opts = RemoveOptions 
+              { roPackageNames = ["Win32"]
+              , roSection = TargetLib
+              , roDryRun = False
+              }
+        result <- removeDependency opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        T.unpack content `shouldNotContain` "Win32"
+        T.unpack content `shouldContain` "base"
+
+    it "handles removal when it is the last dependency" $ do
+       let lastDepCabal = T.unlines
+            [ "cabal-version: 2.4", "name: last", "version: 0.1", "library"
+            , "  build-depends: base"
+            ]
+       withTempCabalFile lastDepCabal $ \path -> do
+        let opts = RemoveOptions 
+              { roPackageNames = ["base"]
+              , roSection = TargetLib
+              , roDryRun = False
+              }
+        result <- removeDependency opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        -- Should have removed base
+        T.unpack content `shouldNotContain` "base"
+        -- Implementation detail: does it leave empty build-depends? 
+        -- Core.Serializer.removeDependencyLine should handle it.
+        -- Let's just check 'base' is gone.
+
 basicCabalFile :: Text
 basicCabalFile = T.unlines
   [ "cabal-version:      2.4"
