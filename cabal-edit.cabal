@@ -112,6 +112,7 @@ test-suite cabal-edit-test
                     , Business.ValidationSpec
                     , Business.SetVersionSpec
                     , Business.FlagSpec
+                    , Business.ListSpec
                     , Business.SubLibrarySpec
                     , Business.SourceDepSpec
                     , Business.CommonStanzaSpec

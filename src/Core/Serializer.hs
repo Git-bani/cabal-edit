@@ -393,12 +393,15 @@ parseSingleDep depStr =
       nameClean = T.strip name
    in if T.null nameClean || "--" `T.isPrefixOf` nameClean
         then Nothing
-        else Just $ Dependency
-          {
-            depName = unsafeMkPackageName nameClean
-          , depVersionConstraint = parseVersionConstraint (T.strip constraint)
-          , depType = BuildDepends
-          }
+        else case mkPackageName nameClean of
+               Left _ -> Nothing
+               Right pkgName ->
+                 Just $ Dependency
+                   {
+                     depName = pkgName
+                   , depVersionConstraint = parseVersionConstraint (T.strip constraint)
+                   , depType = BuildDepends
+                   }
 
 formatDependency :: Dependency -> Text
 formatDependency dep =

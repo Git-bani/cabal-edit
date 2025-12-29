@@ -105,8 +105,8 @@ spec = describe "Golden Roundtrip" $ do
         Success cf1 <- parseCabalFile path
         let deps1 = sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf1)
 
-        removeFile path
-        removeFile (path ++ ".bak")
+        ignoringIOErrors $ removeFile path
+        ignoringIOErrors $ removeFile (path ++ ".bak")
         return (deps0, deps1)
       
       finalDeps === originalDeps

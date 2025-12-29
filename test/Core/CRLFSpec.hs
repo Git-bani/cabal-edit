@@ -13,7 +13,7 @@ spec = do
     it "does not introduce double CR when inserting dependencies" $ do
       let content = "name: test\r\nbuild-depends:\r\n  base\r\n"
           eol = "\r\n"
-          dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+          dep = Dependency (trustedMkPackageName "text") Nothing BuildDepends
           
           -- We use insertDependencyLine directly to test the core logic
           result = insertDependencyLine eol True dep content
@@ -28,8 +28,8 @@ spec = do
     it "handles updateDependencies correctly with CRLF" $ do
       let content = "name: test\r\nlibrary\r\n  build-depends:\r\n    base\r\n"
           eol = "\r\n"
-          pkgName = unsafeMkPackageName "test"
-          dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+          pkgName = trustedMkPackageName "test"
+          dep = Dependency (trustedMkPackageName "text") Nothing BuildDepends
           
           cf = CabalFile 
                { cfPackageName = pkgName

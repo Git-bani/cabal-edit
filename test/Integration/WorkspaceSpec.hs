@@ -9,7 +9,7 @@ import System.FilePath
 import System.Process (callProcess, readProcess)
 import Control.Exception (bracket, catch, IOException)
 import qualified Data.Text as T
-import Data.Text (Text)
+-- import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import Data.List (dropWhileEnd)
 import Data.Char (isSpace)

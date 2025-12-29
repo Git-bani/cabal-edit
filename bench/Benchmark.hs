@@ -30,14 +30,14 @@ main = defaultMain
   ]
 
 sampleDep :: Dependency
-sampleDep = Dependency (unsafeMkPackageName "new-package") (Just (MajorBoundVersion (Version [1,2,3]))) BuildDepends
+sampleDep = Dependency (trustedMkPackageName "new-package") (Just (MajorBoundVersion (Version [1,2,3]))) BuildDepends
 
 duplicateDep :: Dependency
-duplicateDep = Dependency (unsafeMkPackageName "base") Nothing BuildDepends
+duplicateDep = Dependency (trustedMkPackageName "base") Nothing BuildDepends
 
 dummyCabal :: CabalFile
 dummyCabal = CabalFile 
-  { cfPackageName = unsafeMkPackageName "test"
+  { cfPackageName = trustedMkPackageName "test"
   , cfSections = [LibrarySection (Library Nothing [] (TextSpan 0 1000))]
   , cfRawContent = ""
   , cfLineEndings = "\n"

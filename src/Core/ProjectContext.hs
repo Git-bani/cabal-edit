@@ -15,7 +15,7 @@ import System.Directory (doesFileExist, getCurrentDirectory, listDirectory, does
 import System.FilePath ((</>), takeDirectory, takeFileName)
 import Control.Monad (filterM)
 import Data.List (isSuffixOf, find)
-import Core.Types (PackageName, unsafeMkPackageName)
+import Core.Types (PackageName, mkPackageName)
 
 data ProjectContext = ProjectContext
   { pcRoot :: FilePath
@@ -49,10 +49,10 @@ loadProjectContext root = do
   let globs = parseProjectGlobs content
   let ctxNoPkgs = ProjectContext root globs []
   paths <- findAllPackageFiles ctxNoPkgs
-  pkgs <- mapM (\p -> (,p) <$> extractPackageNameSimple p) paths
-  return $ ProjectContext root globs pkgs
+  pkgs <- mapM extractPackageNameSimple paths
+  return $ ProjectContext root globs [ (name, p) | (p, Right name) <- zip paths pkgs ]
 
-extractPackageNameSimple :: FilePath -> IO PackageName
+extractPackageNameSimple :: FilePath -> IO (Either Text PackageName)
 extractPackageNameSimple path = do
   content <- TIO.readFile path
   let ls = T.lines content
@@ -60,10 +60,10 @@ extractPackageNameSimple path = do
   case nameLine of
     Just l -> 
       let (_, val) = T.breakOn ":" l
-      in return $ unsafeMkPackageName $ T.strip $ T.drop 1 val
+      in return $ mkPackageName $ T.strip $ T.drop 1 val
     Nothing -> 
       -- Fallback to filename
-      return $ unsafeMkPackageName $ T.pack $ takeFileName path
+      return $ mkPackageName $ T.pack $ takeFileName path
 
 
 -- | Robust parser for packages and optional-packages

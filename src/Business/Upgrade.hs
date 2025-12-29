@@ -77,18 +77,32 @@ getStartOffset s =
 gatherAllUpgrades :: UpgradeOptions -> [Section] -> IO (Result [Dependency])
 gatherAllUpgrades opts sections = do
   let allDeps = concatMap findDependencies sections
-  let targetDeps = if null (uoPackageNames opts)
-                   then allDeps
-                   else 
-                     let pkgNames = map unsafeMkPackageName (uoPackageNames opts)
-                     in filter (\d -> depName d `elem` pkgNames) allDeps
   
-  -- Resolve latest versions
-  upgradedDepsResult <- forM targetDeps upgradeDependency
-  let failures = [e | Failure e <- upgradedDepsResult]
-  case failures of
-    (e:_) -> return $ Failure e
-    [] -> return $ Success [d | Success d <- upgradedDepsResult]
+  -- Validate user provided package names
+  let userPkgNamesResult = 
+        if null (uoPackageNames opts)
+        then Right []
+        else 
+             let results = map (\n -> (n, mkPackageName n)) (uoPackageNames opts)
+                 errors = [n | (n, Left _) <- results]
+                 valid = [p | (_, Right p) <- results]
+             in if null errors 
+                then Right valid
+                else Left ("Invalid package names: " <> T.intercalate ", " errors)
+
+  case userPkgNamesResult of
+    Left err -> return $ Failure $ Error err InvalidDependency
+    Right pkgNames -> do
+      let targetDeps = if null pkgNames
+                       then allDeps
+                       else filter (\d -> depName d `elem` pkgNames) allDeps
+      
+      -- Resolve latest versions
+      upgradedDepsResult <- forM targetDeps upgradeDependency
+      let failures = [e | Failure e <- upgradedDepsResult]
+      case failures of
+        (e:_) -> return $ Failure e
+        [] -> return $ Success [d | Success d <- upgradedDepsResult]
 
 formatUpgrade :: Dependency -> Text
 formatUpgrade dep = unPackageName (depName dep) <> " " <> formatVersionConstraint (depVersionConstraint dep)

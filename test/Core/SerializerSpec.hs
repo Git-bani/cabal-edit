@@ -16,8 +16,8 @@ spec :: Spec
 spec = do
   describe "Serializer.formatDependencyList" $ do
     it "formats with leading commas" $ do
-      let deps = [ Dependency (unsafeMkPackageName "package-a") Nothing BuildDepends
-                 , Dependency (unsafeMkPackageName "package-b") Nothing BuildDepends
+      let deps = [ Dependency (trustedMkPackageName "package-a") Nothing BuildDepends
+                 , Dependency (trustedMkPackageName "package-b") Nothing BuildDepends
                  ]
       let result = formatDependencyList "\n" True deps 2
       T.unpack result `shouldContain` ", package-b"
@@ -29,7 +29,7 @@ spec = do
             , "  -- build-depends: old-base"
             , "  build-depends: base"
             ]
-      let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+      let dep = Dependency (trustedMkPackageName "text") Nothing BuildDepends
       let result = insertDependencyLine "\n" True dep content
       
       -- Should insert into the real block
@@ -45,7 +45,7 @@ spec = do
             [ "library"
             , "  -- build-depends: old-base"
             ]
-      let dep = Dependency (unsafeMkPackageName "text") Nothing BuildDepends
+      let dep = Dependency (trustedMkPackageName "text") Nothing BuildDepends
       let result = insertDependencyLine "\n" True dep content
       
       -- Should create a new block
@@ -181,7 +181,7 @@ genPackageName = do
   let name = T.cons first (middle <> T.singleton lastC)
   if "--" `T.isInfixOf` name
     then genPackageName
-    else return $ unsafeMkPackageName name
+    else return $ trustedMkPackageName name
 
 genVersionConstraint :: Gen VersionConstraint
 genVersionConstraint = Gen.choice

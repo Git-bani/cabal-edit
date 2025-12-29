@@ -28,7 +28,7 @@ module Core.Types
   , PackageName
   , mkPackageName
   , unPackageName
-  , unsafeMkPackageName
+  , trustedMkPackageName
   
     -- * CLI / Commands
   , CLI(..)
@@ -68,9 +68,9 @@ mkPackageName name
       Left $ "Invalid package name format: '" <> name <> "'. Must contain only letters, numbers, and hyphens."
   | otherwise = Right (PackageName name)
 
--- | Unsafe constructor for internal use (e.g. Parser)
-unsafeMkPackageName :: Text -> PackageName
-unsafeMkPackageName = PackageName
+-- | Trusted constructor for internal use (e.g. Parser when converting from Cabal library types)
+trustedMkPackageName :: Text -> PackageName
+trustedMkPackageName = PackageName
 
 unPackageName :: PackageName -> Text
 unPackageName (PackageName t) = t
@@ -78,7 +78,7 @@ unPackageName (PackageName t) = t
 isValidPackageName :: Text -> Bool
 isValidPackageName name = 
   let chars = T.unpack name
-      validChars = all (\c -> isAlphaNum c || c == '-') chars
+      validChars = all (\c -> isAlphaNum c || c == '-' || c == ':') chars
       noLeadingTrailingHyphen = 
         not (T.isPrefixOf "-" name) && not (T.isSuffixOf "-" name)
       noConsecutiveHyphens = not $ T.isInfixOf "--" name

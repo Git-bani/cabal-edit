@@ -27,7 +27,7 @@ spec = describe "Core.Parser" $ do
         result <- parseCabalFile path
         case result of
           Success cf -> do
-            cfPackageName cf `shouldBe` unsafeMkPackageName "test-package"
+            cfPackageName cf `shouldBe` trustedMkPackageName "test-package"
             length (cfSections cf) `shouldSatisfy` (>= 1)
           Failure e -> expectationFailure $ "Parse failed: " ++ show e
 
@@ -169,7 +169,7 @@ genPackageName :: Gen PackageName
 genPackageName = do
   first <- Gen.alpha
   rest <- Gen.text (Range.linear 1 10) Gen.alphaNum
-  return $ unsafeMkPackageName (T.cons first rest)
+  return $ trustedMkPackageName (T.cons first rest)
 
 genVersionConstraint :: Gen VersionConstraint
 genVersionConstraint = Gen.choice

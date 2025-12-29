@@ -59,7 +59,7 @@ detectLineEndings text =
 
 extractPackageName :: GPD.GenericPackageDescription -> PackageName
 extractPackageName gpd = 
-  unsafeMkPackageName $ T.pack $ PN.unPackageName $ PID.pkgName $ PD.package $ GPD.packageDescription gpd
+  trustedMkPackageName $ T.pack $ PN.unPackageName $ PID.pkgName $ PD.package $ GPD.packageDescription gpd
 
 extractSections :: GPD.GenericPackageDescription -> Text -> [Section]
 extractSections gpd raw = 
@@ -170,11 +170,14 @@ parseCommonDeps content (TextSpan (TextOffset start) (TextOffset end)) =
         in if T.null s then Nothing 
            else 
              let (name, _) = T.break isSpace s
-             in Just $ Dependency 
-                  { depName = unsafeMkPackageName (T.strip name)
-                  , depVersionConstraint = Nothing 
-                  , depType = BuildDepends 
-                  }
+             in case mkPackageName (T.strip name) of
+                  Left _ -> Nothing
+                  Right pkgName ->
+                    Just $ Dependency 
+                      { depName = pkgName
+                      , depVersionConstraint = Nothing 
+                      , depType = BuildDepends 
+                      }
 
 -- Extract library section
 extractLibrary :: GPD.GenericPackageDescription -> Text -> Maybe Section
@@ -263,7 +266,7 @@ cabalDepToInternal :: CabalDep.Dependency -> Dependency
 cabalDepToInternal (CabalDep.Dependency pkgName versionRange _) = 
   Dependency
     {
-     depName = unsafeMkPackageName $ T.pack $ PN.unPackageName pkgName
+     depName = trustedMkPackageName $ T.pack $ PN.unPackageName pkgName
     , depVersionConstraint = Just $ versionRangeToConstraint versionRange
     , depType = BuildDepends
     }
