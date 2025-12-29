@@ -13,7 +13,7 @@ import Utils.Logging (logInfo)
 import Utils.Config (loadConfig, Config(..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+-- import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 
 import Utils.Diff (diffLines, colorizeDiff)

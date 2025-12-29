@@ -47,6 +47,7 @@ library cabal-edit-internal
                     , Business.SetVersion
                     , Business.Flag
                     , Business.Validation
+                    , Business.List
                     , External.Hackage
                     , External.Network
                     , Utils.Formatting

@@ -12,10 +12,10 @@ import Utils.Config (loadConfig, Config(..))
 import Utils.Terminal (selectItems)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+-- import qualified Data.Text.IO as TIO
+import Control.Monad (forM, foldM)
 import Data.List (sortOn)
 import Data.Ord (Down(..))
-import Control.Monad (foldM, forM)
 
 import Utils.Diff (diffLines, colorizeDiff)
 

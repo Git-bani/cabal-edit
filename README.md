@@ -59,6 +59,13 @@ cabal-edit rm -i
 cabal-edit rm old-package --section executable:my-exe
 ```
 
+### Listing Dependencies
+
+```bash
+# List all dependencies in the project
+cabal-edit list
+```
+
 ### Upgrading Dependencies
 
 ```bash
@@ -107,6 +114,9 @@ cabal-edit add aeson --quiet
 
 # Enable verbose logging (shows debug info)
 cabal-edit add aeson --verbose
+
+# Show version information
+cabal-edit --version
 ```
 
 ### Workspace Support

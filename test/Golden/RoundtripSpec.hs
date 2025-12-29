@@ -10,7 +10,7 @@ import qualified Data.Text.IO as TIO
 import System.Directory (getCurrentDirectory, copyFile, removeFile)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
-import Control.Monad (when)
+import Control.Monad (when, forM_)
 import Test.Hspec.Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range

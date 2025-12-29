@@ -4,12 +4,15 @@
 module Main (main) where
 
 import Options.Applicative hiding (Success, Failure)
+import Data.Version (showVersion)
+import Paths_cabal_edit (version)
 import Business.Add
 import Business.Remove
 import Business.Hpack
 import Business.Upgrade
 import Business.SetVersion
 import Business.Flag
+import Business.List
 import Core.Types
 import Core.ProjectContext
 import Utils.Logging
@@ -43,10 +46,15 @@ main = do
 
 -- Command parser
 cliInfo :: ParserInfo CLI
-cliInfo = info (cliParser <**> helper)
+cliInfo = info (cliParser <**> helper <**> versionOption)
   ( fullDesc
   <> progDesc "Manage Cabal dependencies from command line"
   <> header "cabal-edit - A Cargo-edit equivalent for Haskell" )
+
+versionOption :: Parser (a -> a)
+versionOption = infoOption ("cabal-edit version " <> showVersion version)
+  ( long "version"
+  <> help "Show version information" )
 
 cliParser :: Parser CLI
 cliParser = CLI
@@ -76,6 +84,15 @@ commandParser = subparser
   <> command "upgrade" (info upgradeParser (progDesc "Upgrade dependencies"))
   <> command "set-version" (info setVersionParser (progDesc "Set package version"))
   <> command "flag" (info flagParser (progDesc "Manage Cabal flags"))
+  <> command "list" (info listParser (progDesc "List dependencies"))
+  )
+
+listParser :: Parser Command
+listParser = ListCmd <$>
+  ( ListOptions
+  <$> switch
+      ( long "json"
+      <> help "Output in JSON format (not implemented yet)" )
   )
 
 flagParser :: Parser Command
@@ -297,6 +314,17 @@ runOn maybeCtx path cmd = do
     UpgradeCmd opts -> upgradeDependencies opts path
     SetVersionCmd opts -> setVersion opts path
     FlagCmd opts -> handleFlag opts path
+    ListCmd opts -> do
+      targetPath <- if isHpack
+        then do
+          maybeCabal <- findCabalFileInDir (takeDirectory path)
+          case maybeCabal of
+            Just c -> return c
+            Nothing -> do
+              logError "No .cabal file found for package.yaml project. Run 'hpack' first."
+              return path -- Will fail parsing
+        else return path
+      listDependencies opts targetPath
 
 describeAction :: Command -> Text
 describeAction (AddCmd opts) = "Adding " <> T.intercalate ", " (aoPackageNames opts)
@@ -306,6 +334,7 @@ describeAction (UpgradeCmd opts) =
   else "Upgrading " <> T.intercalate ", " (uoPackageNames opts)
 describeAction (SetVersionCmd opts) = "Setting version to " <> svoVersion opts
 describeAction (FlagCmd opts) = describeFlagAction opts
+describeAction (ListCmd _) = "Listing dependencies"
 
 describeFlagAction :: FlagOptions -> Text
 describeFlagAction opts = 
@@ -322,8 +351,13 @@ describeFlagAction opts =
 findCabalFile :: IO (Maybe FilePath)
 findCabalFile = do
   cwd <- getCurrentDirectory
-  files <- listDirectory cwd
+  findCabalFileInDir cwd
+
+findCabalFileInDir :: FilePath -> IO (Maybe FilePath)
+findCabalFileInDir dir = do
+  let targetDir = if null dir then "." else dir
+  files <- listDirectory targetDir
   let cabalFiles = filter (".cabal" `isSuffixOf`) files
   return $ case cabalFiles of
-             (f:_) -> Just f
+             (f:_) -> Just (targetDir </> f)
              [] -> Nothing

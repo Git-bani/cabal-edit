@@ -39,6 +39,7 @@ module Core.Types
   , SetVersionOptions(..)
   , FlagOptions(..)
   , FlagOperation(..)
+  , ListOptions(..)
   
     -- * Results
   , Result(..)
@@ -211,7 +212,13 @@ data Command
   | UpgradeCmd UpgradeOptions
   | SetVersionCmd SetVersionOptions
   | FlagCmd FlagOptions
+  | ListCmd ListOptions
   deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
+
+data ListOptions = ListOptions
+  { loJSON :: Bool
+  } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)
 
 data FlagOptions = FlagOptions
