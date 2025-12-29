@@ -11,12 +11,12 @@ import qualified Data.Text.IO as TIO
 import System.Directory (getCurrentDirectory, removeFile)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
-import Data.List (find)
+-- import Data.List (find)
 
 import Test.Hspec.Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Core.Types
+-- import Core.Types
 
 spec :: Spec
 spec = describe "Core.Parser" $ do

@@ -4,26 +4,28 @@ module Utils.DiffSpec (spec) where
 
 import Test.Hspec
 import Test.Hspec.Hedgehog
+-- import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Utils.Diff
-import qualified Data.Text as T
-import Data.List (nub)
+-- import qualified Data.Text as T
+-- import Data.List (nub)
 
 spec :: Spec
 spec = do
   describe "Utils.Diff" $ do
     it "reconstructs original lists from Diff" $ hedgehog $ do
-      xs <- forAll $ Gen.list (Range.linear 0 20) Gen.alpha
-      ys <- forAll $ Gen.list (Range.linear 0 20) Gen.alpha
+      xs <- forAll $ Gen.list (Range.linear 0 20) (Gen.int (Range.linear 0 100))
+      ys <- forAll $ Gen.list (Range.linear 0 20) (Gen.int (Range.linear 0 100))
       
       let diffs = diffLines xs ys
       
-      let reconstructedXs = [x | d <- diffs, case d of Both x -> True; First x -> True; _ -> False, let x = case d of Both v -> v; First v -> v; _ -> error "impossibru"]
-      let reconstructedYs = [y | d <- diffs, case d of Both y -> True; Second y -> True; _ -> False, let y = case d of Both v -> v; Second v -> v; _ -> error "impossibru"]
+      -- Simplified reconstruction logic to avoid warning
+      let rXs = concatMap (\d -> case d of Both v -> [v]; First v -> [v]; _ -> []) diffs
+      let rYs = concatMap (\d -> case d of Both v -> [v]; Second v -> [v]; _ -> []) diffs
       
-      reconstructedXs === xs
-      reconstructedYs === ys
+      rXs === xs
+      rYs === ys
 
     it "identifies common elements correctly" $ hedgehog $ do
       common <- forAll $ Gen.list (Range.linear 1 10) Gen.alpha
