@@ -22,6 +22,7 @@
 - **Upgrade.hs**: Implements dependency upgrade workflows.
 - **SetVersion.hs**: Logic for updating package version.
 - **Flag.hs**: Logic for managing Cabal flags.
+- **List.hs**: Implements logic for listing dependencies.
 - **Validation.hs**: Cabal syntax validation and safety checks.
 
 ### External Layer (`src/External/`)
@@ -65,7 +66,7 @@ data Dependency = Dependency
 
 ### `PackageName`
 
-Strongly typed package name with validation.
+Strongly typed package name with validation. Created via `mkPackageName` (for user input) or `trustedMkPackageName` (for verified internal sources).
 
 ```haskell
 newtype PackageName = PackageName Text

@@ -70,17 +70,17 @@ To remove a library:
 cabal-edit rm old-library
 ```
 
-### Interactive Removal
+### 3. Listing Dependencies
 
-You can visually select multiple dependencies to remove using the interactive mode:
+You can view all dependencies in your project, grouped by section (Library, Executables, etc.):
 
 ```bash
-cabal-edit rm -i
+cabal-edit list
 ```
 
-This opens a TUI checklist. Use **Arrow Keys** to navigate, **Space** to toggle, and **Enter** to confirm removal.
+This will output a formatted list of all packages and their version constraints.
 
-### 3. Upgrading Dependencies
+### 4. Upgrading Dependencies
 
 To upgrade all dependencies to their latest versions on Hackage:
 
