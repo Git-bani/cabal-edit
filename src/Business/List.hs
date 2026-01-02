@@ -7,7 +7,6 @@ import Core.Parser (parseCabalFile)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.List (sort)
-import Control.Monad (forM_)
 import qualified Distribution.Pretty as DP
 
 listDependencies :: ListOptions -> FilePath -> IO (Result ())

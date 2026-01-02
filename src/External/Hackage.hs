@@ -18,7 +18,7 @@ import System.FilePath ((</>))
 import Data.Time (getCurrentTime, diffUTCTime)
 import Text.Read (readMaybe)
 import Data.Maybe (mapMaybe)
-import Data.Aeson (FromJSON(..), withArray, (.:), withObject)
+import Data.Aeson (FromJSON(..), (.:), withObject)
 
 -- | Search for packages on Hackage by keyword
 -- Uses Hackage search API: GET /packages/search?terms={query}

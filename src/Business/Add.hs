@@ -16,7 +16,7 @@ import External.Hackage (searchPackages)
 import Data.Text (Text)
 import qualified Data.Text as T
 -- import qualified Data.Text.IO as TIO
-import Control.Monad (foldM, forM_)
+import Control.Monad (foldM)
 
 import Utils.Diff (diffLines, colorizeDiff)
 

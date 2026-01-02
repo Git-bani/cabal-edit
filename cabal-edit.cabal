@@ -40,6 +40,9 @@ library cabal-edit-internal
                     , Core.ProjectEditor
                     , Core.HpackEditor
                     , Core.Safety
+                    , Core.AST.Types
+                    , Core.AST.Parser
+                    , Core.AST.Serializer
                     , Business.Add
                     , Business.Remove
                     , Business.Hpack
@@ -122,6 +125,7 @@ test-suite cabal-edit-test
                     , Integration.HpackSpec
                     , Utils.ConfigSpec
                     , Golden.RoundtripSpec
+                    , Core.AST.RoundtripSpec
     build-tool-depends: hspec-discover:hspec-discover
     build-depends:    base
                     , cabal-edit-internal
