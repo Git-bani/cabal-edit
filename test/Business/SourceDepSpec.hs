@@ -24,6 +24,7 @@ spec = describe "Business.SourceDep" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Just "https://github.com/example/foo"
             , aoTag = Just "v1.0"
             , aoPath = Nothing
@@ -63,6 +64,7 @@ spec = describe "Business.SourceDep" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Just "../bar"

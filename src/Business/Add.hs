@@ -9,12 +9,14 @@ import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
 import Core.ProjectContext (ProjectContext)
-import Utils.Logging (logInfo)
+import Utils.Logging (logInfo, logError, logWarning)
 import Utils.Config (loadConfig, Config(..))
+import Utils.Terminal (selectItems)
+import External.Hackage (searchPackages)
 import Data.Text (Text)
 import qualified Data.Text as T
 -- import qualified Data.Text.IO as TIO
-import Control.Monad (foldM)
+import Control.Monad (foldM, forM_)
 
 import Utils.Diff (diffLines, colorizeDiff)
 
@@ -23,32 +25,57 @@ addDependency maybeCtx opts path = do
   cfg <- loadConfig
   let leadingComma = cfgLeadingComma cfg
   
-  -- 0. Handle Source Dependencies (Git / Path)
-  sourceDepResult <- handleSourceDependency opts
-  case sourceDepResult of
+  -- 0. Handle Interactive Search
+  pkgNamesResult <- if aoInteractive opts
+                    then handleInteractiveSearch (aoPackageNames opts)
+                    else return $ Success (aoPackageNames opts)
+
+  case pkgNamesResult of
     Failure err -> return $ Failure err
-    Success () -> do
-      -- 1. Parse cabal file
-      parseResult <- parseCabalFile path
-      case parseResult of
+    Success targetPkgNames -> do
+      -- 0. Handle Source Dependencies (Git / Path)
+      sourceDepResult <- handleSourceDependency opts
+      case sourceDepResult of
         Failure err -> return $ Failure err
-        Success cabalFile -> do
-          -- 2. Process each package
-          let eol = cfLineEndings cabalFile
-          let initialContent = cfRawContent cabalFile
-          
-          finalContentResult <- foldM (processPackage maybeCtx opts eol leadingComma cabalFile) (Success initialContent) (aoPackageNames opts)
-          
-          case finalContentResult of
+        Success () -> do
+          -- 1. Parse cabal file
+          parseResult <- parseCabalFile path
+          case parseResult of
             Failure err -> return $ Failure err
-            Success finalContent -> 
-              if aoDryRun opts
-                then do
-                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                  let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
-                  colorizeDiff diffs
-                  return $ Success ()
-                else safeWriteCabal path finalContent
+            Success cabalFile -> do
+              -- 2. Process each package
+              let eol = cfLineEndings cabalFile
+              let initialContent = cfRawContent cabalFile
+              
+              finalContentResult <- foldM (processPackage maybeCtx opts eol leadingComma cabalFile) (Success initialContent) targetPkgNames
+              
+              case finalContentResult of
+                Failure err -> return $ Failure err
+                Success finalContent -> 
+                  if aoDryRun opts
+                    then do
+                      logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                      let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
+                      colorizeDiff diffs
+                      return $ Success ()
+                    else safeWriteCabal path finalContent
+
+handleInteractiveSearch :: [Text] -> IO (Result [Text])
+handleInteractiveSearch [] = do
+  logError "Please provide a search term for interactive mode: 'add -i <term>'"
+  return $ Success []
+handleInteractiveSearch terms = do
+  let query = T.intercalate " " terms
+  logInfo $ "Searching Hackage for '" <> query <> "'..."
+  searchResult <- searchPackages query
+  case searchResult of
+    Failure err -> return $ Failure err
+    Success [] -> do
+      logWarning "No packages found matching your search."
+      return $ Success []
+    Success results -> do
+      selected <- selectItems "Select packages to add:" results
+      return $ Success selected
 
 processPackage :: Maybe ProjectContext -> AddOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
 processPackage _ _ _ _ _ (Failure err) _ = return $ Failure err

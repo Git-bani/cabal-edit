@@ -24,6 +24,7 @@ spec = describe "Sub-library Support" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -47,6 +48,7 @@ spec = describe "Sub-library Support" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing

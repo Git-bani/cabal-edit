@@ -155,6 +155,10 @@ addParser = AddCmd <$>
   <*> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> switch
+      ( long "interactive"
+      <> short 'i'
+      <> help "Search Hackage interactively" )
   <*> optional (strOption
       ( long "git"
       <> metavar "URL"

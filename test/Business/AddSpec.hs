@@ -24,6 +24,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -48,6 +49,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -68,6 +70,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = True
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -89,6 +92,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = True
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -106,6 +110,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -129,6 +134,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -150,6 +156,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -175,6 +182,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Just "os(windows)", aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -193,6 +201,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Just "os(linux)", aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -211,6 +220,7 @@ spec = describe "Business.Add" $ do
             , aoCondition = Just "os(windows)", aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+          , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing
@@ -237,6 +247,7 @@ spec = describe "Business.Add" $ do
               , aoCondition = Nothing, aoFlag = Nothing
               , aoDev = False
               , aoDryRun = False
+          , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing
@@ -261,6 +272,7 @@ spec = describe "Business.Add" $ do
               , aoCondition = Nothing, aoFlag = Nothing
               , aoDev = False
               , aoDryRun = False
+          , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing
@@ -295,6 +307,7 @@ spec = describe "Business.Add" $ do
               
               , aoDev = False
               , aoDryRun = False
+          , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing
@@ -316,6 +329,7 @@ spec = describe "Business.Add" $ do
               
               , aoDev = False
               , aoDryRun = False
+          , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing

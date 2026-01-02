@@ -246,6 +246,7 @@ data AddOptions = AddOptions
   , aoFlag :: Maybe Text
   , aoDev :: Bool
   , aoDryRun :: Bool
+  , aoInteractive :: Bool
   , aoGit :: Maybe Text
   , aoTag :: Maybe Text
   , aoPath :: Maybe Text

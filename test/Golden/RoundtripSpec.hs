@@ -39,6 +39,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing
+              , aoInteractive = False
               }        
         resAdd <- addDependency Nothing addOpts path
         resAdd `shouldSatisfy` isSuccess
@@ -69,6 +70,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing
+              , aoInteractive = False
               }
         -- First add
         _ <- addDependency Nothing addOpts path
@@ -95,7 +97,7 @@ spec = describe "Golden Roundtrip" $ do
         Success cf0 <- parseCabalFile path
         let deps0 = sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf0)
 
-        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Nothing, aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing }
+        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Nothing, aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoInteractive = False }
         _ <- addDependency Nothing addOpts path
         
         let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roInteractive = False }

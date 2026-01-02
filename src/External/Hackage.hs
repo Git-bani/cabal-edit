@@ -3,6 +3,7 @@
 module External.Hackage
   ( fetchPackageVersions
   , fetchLatestVersion
+  , searchPackages
   ) where
 
 import Core.Types
@@ -17,6 +18,28 @@ import System.FilePath ((</>))
 import Data.Time (getCurrentTime, diffUTCTime)
 import Text.Read (readMaybe)
 import Data.Maybe (mapMaybe)
+import Data.Aeson (FromJSON(..), withArray, (.:), withObject)
+
+-- | Search for packages on Hackage by keyword
+-- Uses Hackage search API: GET /packages/search?terms={query}
+searchPackages :: Text -> IO (Result [Text])
+searchPackages query = do
+  cfg <- loadConfig
+  let url = cfgHackageUrl cfg <> "/packages/search?terms=" <> query
+  -- The search API returns a JSON array of objects with "name" field
+  -- but we can also use simpler HTML search or check if there's a better JSON endpoint.
+  -- Actually Hackage has: GET /packages/search?terms=... which returns JSON if Accept: application/json
+  -- format: [{"name":"pkg1", ...}, ...]
+  
+  result <- httpGetJSON url :: IO (Either Error [HackageSearchResult])
+  case result of
+    Left err -> return $ Failure err
+    Right searchResults -> return $ Success $ map hsrName searchResults
+
+data HackageSearchResult = HackageSearchResult { hsrName :: Text }
+
+instance FromJSON HackageSearchResult where
+  parseJSON = withObject "HackageSearchResult" $ \v -> HackageSearchResult <$> v .: "name"
 
 -- | Fetch latest version of a package
 -- Uses Hackage JSON API: GET /package/{pkg} -> {"1.0.0":"normal", ...}
