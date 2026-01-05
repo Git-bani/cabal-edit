@@ -1,56 +1,50 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Business.List (listDependencies, formatDependencies) where
+module Business.List (listDependencies, formatDependenciesAST) where
 
 import Core.Types
-import Core.Parser (parseCabalFile)
+import Core.AST.Types (CabalAST)
+import Core.AST.Parser (parseAST)
+import Core.AST.Editor (findDependenciesInAST)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.List (sort)
+import Data.List (sort, groupBy, sortOn)
+import Data.Function (on)
+import Control.Monad (forM_)
 import qualified Distribution.Pretty as DP
 
 listDependencies :: ListOptions -> FilePath -> IO (Result ())
 listDependencies opts path = do
-  parseResult <- parseCabalFile path
-  
-  case parseResult of
-    Failure err -> return $ Failure err
-    Success cabalFile -> do
-      let output = formatDependencies opts cabalFile
-      TIO.putStrLn output
-      return $ Success ()
+  content <- TIO.readFile path
+  let ast = parseAST content
+  TIO.putStrLn $ formatDependenciesAST opts ast
+  return $ Success ()
 
-formatDependencies :: ListOptions -> CabalFile -> T.Text
-formatDependencies _ cf = T.intercalate "\n" $ filter (not . T.null) lines'
+formatDependenciesAST :: ListOptions -> CabalAST -> T.Text
+formatDependenciesAST _ ast = 
+  let deps = findDependenciesInAST ast
+  in if null deps
+     then "No dependencies found."
+     else T.intercalate "\n" $ concatMap formatGroup (groupBy ((==) `on` fst3) deps)
   where
-    lines' = ("Dependencies for " <> unPackageName (cfPackageName cf)) : concatMap formatSection (cfSections cf)
-
-formatSection :: Section -> [T.Text]
-formatSection section = case section of
-  LibrarySection lib -> 
-    fmtSec (maybe "Library" ("Library " <>) (libName lib)) (libBuildDepends lib)
-  ExecutableSection exe -> 
-    fmtSec ("Executable " <> exeName exe) (exeBuildDepends exe)
-  TestSuiteSection test -> 
-    fmtSec ("Test Suite " <> testName test) (testBuildDepends test)
-  BenchmarkSection bench -> 
-    fmtSec ("Benchmark " <> benchName bench) (benchBuildDepends bench)
-  CommonStanzaSection common ->
-    fmtSec ("Common Stanza " <> commonName common) (commonBuildDepends common)
-  _ -> []
-
-fmtSec :: T.Text -> [Dependency] -> [T.Text]
-fmtSec name deps
-  | null deps = []
-  | otherwise = 
-      let header = "\n" <> name <> ":"
-          depLines = map fmtDep (sort deps)
+    formatGroup secDeps =
+      let (secName, _, _) = head secDeps
+          header = "\n" <> secName <> ":"
+          sorted = sortOn (depName . thd3) secDeps
+          depLines = map formatEntry sorted
       in header : depLines
+    
+    formatEntry (_, mCond, d) =
+      let condStr = case mCond of
+                      Just c -> " (if " <> c <> ")"
+                      Nothing -> ""
+      in "  - " <> unPackageName (depName d) <> " " <> formatVersionConstraint (depVersionConstraint d) <> condStr
 
-fmtDep :: Dependency -> T.Text
-fmtDep dep = 
-  let ver = formatVersionConstraint (depVersionConstraint dep)
-  in "  - " <> unPackageName (depName dep) <> " " <> ver
+fst3 :: (a, b, c) -> a
+fst3 (a, _, _) = a
+
+thd3 :: (a, b, c) -> c
+thd3 (_, _, c) = c
 
 formatVersionConstraint :: Maybe VersionConstraint -> T.Text
 formatVersionConstraint Nothing = "(*)"

@@ -26,7 +26,7 @@ spec = describe "Business.SetVersion" $ do
       result `shouldSatisfy` isSuccess
       
       content <- TIO.readFile path
-      T.unpack content `shouldContain` "version:            1.2.3.4"
+      T.unpack content `shouldContain` "version: 1.2.3.4"
       T.unpack content `shouldNotContain` "version:            0.1.0.0"
 
 basicCabalFile :: Text

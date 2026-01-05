@@ -4,7 +4,9 @@ module Business.Remove (removeDependency) where
 
 import Core.Types
 import Core.Parser
-import Core.Serializer
+import Core.AST.Parser (parseAST)
+import Core.AST.Serializer (serializeAST)
+import Core.AST.Editor (removeDependencyFromAST, findDependencyInAST)
 import Core.Safety
 import Utils.Logging (logInfo)
 import Utils.Config (loadConfig, Config(..))
@@ -12,6 +14,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 -- import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
+import Data.Maybe (maybeToList)
 
 import Utils.Terminal (selectItems)
 import Utils.Diff (diffLines, colorizeDiff)
@@ -19,9 +22,6 @@ import Data.List (nub)
 
 removeDependency :: RemoveOptions -> FilePath -> IO (Result ())
 removeDependency opts path = do
-  cfg <- loadConfig
-  let leadingComma = cfgLeadingComma cfg
-  
   -- 1. Parse cabal file
   parseResult <- parseCabalFile path
   case parseResult of
@@ -40,11 +40,10 @@ removeDependency opts path = do
       if null packageNames && not (null (roPackageNames opts) && not (roInteractive opts))
         then return $ Success () -- Nothing to do
         else do
-          -- 3. Process each package
-          let eol = cfLineEndings cabalFile
+      -- 3. Process each package
           let initialContent = cfRawContent cabalFile
           
-          finalContentResult <- foldM (processPackageRemove opts eol leadingComma cabalFile) (Success initialContent) packageNames
+          finalContentResult <- foldM (processPackageRemove opts cabalFile) (Success initialContent) packageNames
           
           case finalContentResult of
             Failure err -> return $ Failure err
@@ -55,29 +54,29 @@ removeDependency opts path = do
                   let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
                   colorizeDiff diffs
                   return $ Success ()
-                else safeWriteCabal path finalContent
+                else safeWriteFile path finalContent
 
-processPackageRemove :: RemoveOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
-processPackageRemove _ _ _ _ (Failure err) _ = return $ Failure err
-processPackageRemove opts eol leadingComma cabalFile (Success currentContent) pkgNameText = do
+processPackageRemove :: RemoveOptions -> CabalFile -> Result Text -> Text -> IO (Result Text)
+processPackageRemove _ _ (Failure err) _ = return $ Failure err
+processPackageRemove opts cabalFile (Success currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
     Left err -> return $ Failure $ Error err InvalidDependency
     Right pkgName -> do
-      let dep = Dependency { depName = pkgName, depVersionConstraint = Nothing, depType = BuildDepends }
-      
       -- Determine which sections to remove from
       let targets = case roSection opts of
             TargetLib -> 
-              -- Smart detection: find all sections that HAVE this dependency
-              let allSections = cfSections cabalFile
-                  matchingSections = filter (hasDependency pkgName) allSections
-              in if null matchingSections 
-                 then [TargetLib] -- Default to library if none found (will fail later with "not found")
-                 else map sectionToTarget matchingSections
+              -- Smart detection using AST: find all sections/blocks that HAVE this dependency
+              let ast = parseAST currentContent
+                  found = findDependencyInAST (unPackageName pkgName) ast
+              in if null found 
+                 then [TargetLib] -- Default to library if none found (will fail later)
+                 else map (\(sec, mCond) -> case mCond of
+                                              Nothing -> TargetNamed sec
+                                              Just cond -> TargetConditional (TargetNamed sec) cond) found
             other -> [other]
             
       -- Apply removal to all targets
-      let result = foldl (applyRemoval pkgName dep eol leadingComma cabalFile) (Success currentContent) targets
+      let result = foldl (applyRemoval pkgName cabalFile) (Success currentContent) targets
       
       -- If nothing was removed (content same as before), and we didn't already have a failure, return error
       case result of
@@ -101,17 +100,28 @@ sectionToTarget (FlagSection f) = TargetCommon (Just $ flagName f) -- Reusing Ta
 -- Actually, let's use TargetNamed.
 sectionToTarget (UnknownSection name _) = TargetNamed name
 
-applyRemoval :: PackageName -> Dependency -> Text -> Bool -> CabalFile -> Result Text -> SectionTarget -> Result Text
-applyRemoval _ _ _ _ _ (Failure err) _ = Failure err
-applyRemoval pkgName dep eol leadingComma cabalFile (Success content) target =
-  case resolveTargetBounds target cabalFile content of
-    Left err -> Failure err
-    Right (start, end, _, _) ->
-       let (before, rest) = T.splitAt start content
-           (sectionContent, after) = T.splitAt (end - start) rest
-       in if not (unPackageName pkgName `T.isInfixOf` sectionContent)
-          then Success content -- Skip if not in this section
-          else Success $ before <> removeDependencyLine eol leadingComma dep sectionContent <> after
+applyRemoval :: PackageName -> CabalFile -> Result Text -> SectionTarget -> Result Text
+applyRemoval _ _ (Failure err) _ = Failure err
+applyRemoval pkgName _ (Success content) target =
+  let (targetName, condition) = case target of
+        TargetConditional (TargetNamed n) c -> (n, Just c)
+        TargetConditional base c -> (describeTarget base, Just c)
+        TargetNamed n -> (n, Nothing)
+        other -> (describeTarget other, Nothing)
+      ast = parseAST content
+  in case removeDependencyFromAST targetName condition (unPackageName pkgName) ast of
+       Failure err -> Failure err
+       Success updatedAST -> Success $ serializeAST updatedAST
+
+describeTarget :: SectionTarget -> Text
+describeTarget TargetLib = "library"
+describeTarget (TargetNamed n) = n 
+describeTarget (TargetExe mn) = T.unwords $ ["executable"] ++ maybeToList mn
+describeTarget (TargetTest mn) = T.unwords $ ["test-suite"] ++ maybeToList mn
+describeTarget (TargetBench mn) = T.unwords $ ["benchmark"] ++ maybeToList mn
+describeTarget (TargetCommon mn) = T.unwords $ ["common"] ++ maybeToList mn
+describeTarget (TargetConditional base _) = describeTarget base
+
 
 -- ... keep helper describeSection if needed or reuse ...
 

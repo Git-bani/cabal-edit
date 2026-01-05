@@ -29,11 +29,15 @@ import qualified Integration.HpackSpec
 import qualified Utils.ConfigSpec
 import qualified Utils.DiffSpec
 import qualified Core.AST.RoundtripSpec
+import qualified Core.AST.EditorSpec
+import qualified Business.DebugAddSpec
 
 main :: IO ()
 main = hspec $ do
   describe "Core.AST.Roundtrip" Core.AST.RoundtripSpec.spec
+  describe "Core.AST.Editor" Core.AST.EditorSpec.spec
   describe "Business.Add" Business.AddSpec.spec
+  describe "Business.DebugAdd" Business.DebugAddSpec.spec
   describe "Business.Remove" Business.RemoveSpec.spec
   describe "Business.Upgrade" Business.UpgradeSpec.spec
   describe "Business.SubLibrary" Business.SubLibrarySpec.spec

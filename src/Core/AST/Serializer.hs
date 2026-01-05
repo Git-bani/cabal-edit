@@ -24,17 +24,16 @@ serializeItem (IfBlock il thenItems elsePart) =
 serializeField :: FieldLine -> Text
 serializeField fl = 
   let indent = T.replicate (fieldIndent fl) " "
-  in indent <> fieldName fl <> ":" <> fieldValue fl 
-  -- Note: fieldValue might contain newlines. If we parsed them into one Text, we need to ensure they are formatted right.
-  -- My Parser merged them with `\n`. If the original had indentation in hanging lines, it is preserved in `fieldValue`?
-  -- Let's check Parser: `map snd hangingLines`. `snd` is the raw line text.
-  -- Yes, so `fieldValue` contains the raw text of subsequent lines.
-  -- `val` (first line value) also preserves leading spaces? 
-  -- In Parser: `val = T.drop 1 valPart`. `valPart` includes the colon.
-  -- `val` does NOT strip leading spaces. `T.strip val` was NOT called in Parser (wait, let me check).
-  -- Parser: `fLine = FieldLine indent name (T.strip val)` -> STRIPPED!
-  -- This is a problem for round-tripping. The space after colon is lost if stripped.
-  -- I should NOT strip in Parser if I want perfect roundtrip.
+  in indent <> fieldName fl <> ":" <> formatFieldValue (fieldIndent fl) (fieldValue fl)
+
+formatFieldValue :: Int -> Text -> Text
+formatFieldValue _ val = val
+
+ensureIndent :: Int -> Text -> Text
+ensureIndent target t
+  | T.null (T.strip t) = t
+  | T.length (T.takeWhile (== ' ') t) >= target = t
+  | otherwise = T.replicate target " " <> T.stripStart t
 
 serializeSection :: SectionLine -> Text
 serializeSection sl = 

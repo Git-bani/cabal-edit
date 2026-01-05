@@ -96,36 +96,14 @@ parseField indent ((_, line):rest) =
   let (name, valPart) = T.breakOn ":" (T.stripStart line)
       val = T.drop 1 valPart -- drop ":"
       
-      fLine = FieldLine indent name val -- Keep raw value for round-trip
-      
-      -- A field might have "hanging" lines that belong to it
-      -- e.g.
-      -- build-depends:
-      --     base,
-      --     text
-      --
-      -- These lines are indented MORE than the field itself.
-      
       (hangingLines, remaining) = span (isHanging indent) rest
-      
-      -- We need to merge hanging lines into the value?
-      -- Or should FieldItem support multiline values naturally?
-      -- Current AST defines `fieldValue :: Text`.
-      -- Let's assume we just store the initial line value, and separate hanging lines?
-      -- No, that breaks "FieldItem".
-      --
-      -- Wait, my AST definition for FieldItem was: `FieldItem FieldLine`.
-      -- `FieldLine` has `fieldValue :: Text`.
-      -- If we have multiple lines, we should probably modify `FieldItem` to hold them.
-      -- OR, we treat hanging lines as part of the value.
       
       fullValue = if null hangingLines 
                   then val 
                   else val <> "\n" <> T.intercalate "\n" (map snd hangingLines)
                   
-      fLine' = fLine { fieldValue = fullValue }
-      
-  in (FieldItem fLine', remaining)
+      fLine = FieldLine indent name fullValue
+  in (FieldItem fLine, remaining)
 
   where
     isHanging :: Int -> (Int, Text) -> Bool

@@ -43,6 +43,7 @@ library cabal-edit-internal
                     , Core.AST.Types
                     , Core.AST.Parser
                     , Core.AST.Serializer
+                    , Core.AST.Editor
                     , Business.Add
                     , Business.Remove
                     , Business.Hpack
@@ -118,7 +119,9 @@ test-suite cabal-edit-test
                     , Business.ListSpec
                     , Business.SubLibrarySpec
                     , Business.SourceDepSpec
+                    , Business.UpgradeSpec
                     , Business.CommonStanzaSpec
+                    , Business.DebugAddSpec
                     , Core.ProjectContextSpec
                     , Integration.EndToEndSpec
                     , Integration.WorkspaceSpec
@@ -126,6 +129,7 @@ test-suite cabal-edit-test
                     , Utils.ConfigSpec
                     , Golden.RoundtripSpec
                     , Core.AST.RoundtripSpec
+                    , Core.AST.EditorSpec
     build-tool-depends: hspec-discover:hspec-discover
     build-depends:    base
                     , cabal-edit-internal

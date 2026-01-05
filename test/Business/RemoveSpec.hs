@@ -130,6 +130,27 @@ spec = describe "Business.Remove" $ do
         -- Core.Serializer.removeDependencyLine should handle it.
         -- Let's just check 'base' is gone.
 
+    it "removes the entire conditional block when the last dependency is removed" $ do
+      let cabalWithIf = T.unlines
+            [ "cabal-version: 2.4", "name: if-test", "version: 0.1", "library"
+            , "  if os(windows)"
+            , "    build-depends: Win32"
+            , "  build-depends: base"
+            ]
+      withTempCabalFile cabalWithIf $ \path -> do
+        let opts = RemoveOptions 
+              { roPackageNames = ["Win32"]
+              , roSection = TargetLib
+              , roDryRun = False, roInteractive = False
+              }
+        result <- removeDependency opts path
+        result `shouldSatisfy` isSuccess
+        
+        content <- TIO.readFile path
+        T.unpack content `shouldNotContain` "Win32"
+        T.unpack content `shouldContain` "base"
+        T.unpack content `shouldNotContain` "if os(windows)"
+
 basicCabalFile :: Text
 basicCabalFile = T.unlines
   [ "cabal-version:      2.4"

@@ -1,44 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Business.SetVersion (setVersion, updateProjectVersion) where
+module Business.SetVersion (setVersion) where
 
-import Core.Types (SetVersionOptions(..), Result(..), CabalFile(..))
-import Core.Parser
+import Core.Types (SetVersionOptions(..), Result(..))
+import Core.AST.Parser (parseAST)
+import Core.AST.Serializer (serializeAST)
+import Core.AST.Editor (updateFieldInAST)
 import Core.Safety
 import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Utils.Diff (diffLines, colorizeDiff)
 
 setVersion :: SetVersionOptions -> FilePath -> IO (Result ())
 setVersion opts path = do
-  parseResult <- parseCabalFile path
-  case parseResult of
+  content <- TIO.readFile path
+  let ast = parseAST content
+  
+  case updateFieldInAST "version" (svoVersion opts) ast of
     Failure err -> return $ Failure err
-    Success cabalFile -> do
-      let newVersion = svoVersion opts
-      let oldContent = cfRawContent cabalFile
-      let newContent = updateProjectVersion newVersion oldContent
-      
-      if newContent == oldContent
+    Success updatedAST -> do
+      let newContent = serializeAST updatedAST
+      if newContent == content
         then return $ Success ()
         else if svoDryRun opts
           then do
             logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-            TIO.putStrLn newContent
+            let diffs = diffLines (T.lines content) (T.lines newContent)
+            colorizeDiff diffs
             return $ Success ()
-          else safeWriteCabal path newContent
-
-updateProjectVersion :: Text -> Text -> Text
-updateProjectVersion newVer content =
-  let ls = T.lines content
-      newLines = map updateLine ls
-  in T.unlines newLines
-  where
-    updateLine line =
-      let trimmed = T.stripStart line
-      in if "version:" `T.isPrefixOf` T.toLower trimmed
-         then 
-           let indent = T.takeWhile (== ' ') line
-           in indent <> "version:            " <> newVer
-         else line
+          else safeWriteFile path newContent

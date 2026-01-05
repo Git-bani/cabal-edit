@@ -4,7 +4,9 @@ module Business.Add (addDependency) where
 
 import Core.Types
 import Core.Parser
-import Core.Serializer (insertDependencyLine, updateDependencyLine, detectIndentation)
+import Core.AST.Parser (parseAST)
+import Core.AST.Serializer (serializeAST)
+import Core.AST.Editor (addDependencyToAST)
 import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
@@ -17,14 +19,12 @@ import Data.Text (Text)
 import qualified Data.Text as T
 -- import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
+import Data.Maybe (maybeToList)
 
 import Utils.Diff (diffLines, colorizeDiff)
 
 addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Result ())
 addDependency maybeCtx opts path = do
-  cfg <- loadConfig
-  let leadingComma = cfgLeadingComma cfg
-  
   -- 0. Handle Interactive Search
   pkgNamesResult <- if aoInteractive opts
                     then handleInteractiveSearch (aoPackageNames opts)
@@ -44,10 +44,9 @@ addDependency maybeCtx opts path = do
             Failure err -> return $ Failure err
             Success cabalFile -> do
               -- 2. Process each package
-              let eol = cfLineEndings cabalFile
               let initialContent = cfRawContent cabalFile
               
-              finalContentResult <- foldM (processPackage maybeCtx opts eol leadingComma cabalFile) (Success initialContent) targetPkgNames
+              finalContentResult <- foldM (processPackage maybeCtx opts) (Success initialContent) targetPkgNames
               
               case finalContentResult of
                 Failure err -> return $ Failure err
@@ -58,7 +57,7 @@ addDependency maybeCtx opts path = do
                       let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
                       colorizeDiff diffs
                       return $ Success ()
-                    else safeWriteCabal path finalContent
+                    else safeWriteFile path finalContent
 
 handleInteractiveSearch :: [Text] -> IO (Result [Text])
 handleInteractiveSearch [] = do
@@ -77,9 +76,9 @@ handleInteractiveSearch terms = do
       selected <- selectItems "Select packages to add:" results
       return $ Success selected
 
-processPackage :: Maybe ProjectContext -> AddOptions -> Text -> Bool -> CabalFile -> Result Text -> Text -> IO (Result Text)
-processPackage _ _ _ _ _ (Failure err) _ = return $ Failure err
-processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent) pkgNameText = do
+processPackage :: Maybe ProjectContext -> AddOptions -> Result Text -> Text -> IO (Result Text)
+processPackage _ _ (Failure err) _ = return $ Failure err
+processPackage maybeCtx opts (Success currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
     Left err -> return $ Failure $ Error err InvalidDependency
     Right pkgName -> do
@@ -92,13 +91,11 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
       case constraintResult of
         Failure err -> return $ Failure err
         Success constraint -> do
-          -- Determine target section (re-finding in the list of sections from parsed file)
-          -- Note: sections positions might shift if we were editing the whole file at once, 
-          -- but here we are accumulating changes in `currentContent`.
-          -- We need to find the section again in the updated content.
-          -- Actually, findSection returns a Section with position.
-          -- If we edit one section, other sections' positions might change.
-          -- Strategy: Always use `cabalFile` to find section names, but use a fresh search in `currentContent`.
+          let dep = Dependency
+                { depName = pkgName
+                , depVersionConstraint = Just constraint
+                , depType = if aoDev opts then TestDepends else BuildDepends
+                }
           
           -- Determine target section/block
           let baseTarget = aoSection opts
@@ -108,42 +105,16 @@ processPackage maybeCtx opts eol leadingComma cabalFile (Success currentContent)
                                          Just f -> Just ("flag(" <> f <> ")")
                                          Nothing -> Nothing
 
-          let target = case condition of
-                         Nothing -> baseTarget
-                         Just cond -> TargetConditional baseTarget cond
-          
-          case resolveTargetBounds target cabalFile currentContent of
-            Left err -> return $ Failure err
-            Right (start, end, prefix, suffix) -> do
-              -- Create dependency
-              let dep = Dependency
-                    { depName = pkgName
-                    , depVersionConstraint = Just constraint
-                    , depType = if aoDev opts then TestDepends else BuildDepends
-                    }
-              
-              let (before, rest) = T.splitAt start currentContent
-              let actualSectionContent = if T.null prefix 
-                                         then T.take (end - start) rest
-                                         else 
-                                           -- Creating new block.
-                                           -- We need to know the base indent.
-                                           let bIndent = detectIndentation currentContent
-                                               indentStr = T.replicate (bIndent + 4) " "
-                                           in indentStr <> "build-depends: "
-              
-              let after = if T.null prefix then T.drop (end - start) rest else rest
-              
-              -- Check if dependency exists in THIS section
-              let alreadyExists = if T.null prefix 
-                                  then unPackageName pkgName `T.isInfixOf` actualSectionContent
-                                  else False
-              
-              let newSectionContent = if alreadyExists
-                    then updateDependencyLine eol leadingComma dep actualSectionContent
-                    else insertDependencyLine eol leadingComma dep actualSectionContent
-                    
-              return $ Success $ before <> prefix <> newSectionContent <> suffix <> after
+          -- Use AST Editor for all additions
+          let ast = parseAST currentContent
+          let targetName = case baseTarget of
+                             TargetNamed n -> n
+                             _ -> describeTarget baseTarget
+          case addDependencyToAST targetName condition dep ast of
+            Failure err -> return $ Failure err
+            Success updatedAST -> return $ Success $ serializeAST updatedAST
+
+
 
 handleSourceDependency :: AddOptions -> IO (Result ())
 handleSourceDependency opts
@@ -165,3 +136,13 @@ isJust Nothing  = False
 isNothing :: Maybe a -> Bool
 isNothing Nothing = True
 isNothing _       = False
+
+describeTarget :: SectionTarget -> Text
+describeTarget TargetLib = "library"
+describeTarget (TargetNamed n) = n 
+describeTarget (TargetExe mn) = T.unwords $ ["executable"] ++ maybeToList mn
+describeTarget (TargetTest mn) = T.unwords $ ["test-suite"] ++ maybeToList mn
+describeTarget (TargetBench mn) = T.unwords $ ["benchmark"] ++ maybeToList mn
+describeTarget (TargetCommon mn) = T.unwords $ ["common"] ++ maybeToList mn
+describeTarget (TargetConditional base _) = describeTarget base
+

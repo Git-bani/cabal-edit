@@ -94,18 +94,22 @@ spec = describe "Golden Roundtrip" $ do
         TIO.writeFile path baseContent
         
         -- Get original deps
-        Success cf0 <- parseCabalFile path
-        let deps0 = sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf0)
+        res0 <- parseCabalFile path
+        deps0 <- case res0 of
+           Success cf0 -> return $ sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf0)
+           Failure err -> fail $ "Parse failed for initial content: " ++ show err
 
-        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Nothing, aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoInteractive = False }
+        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoInteractive = False }
         _ <- addDependency Nothing addOpts path
         
         let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roInteractive = False }
         _ <- removeDependency rmOpts path
         
         -- Get final deps
-        Success cf1 <- parseCabalFile path
-        let deps1 = sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf1)
+        res1 <- parseCabalFile path
+        deps1 <- case res1 of
+           Success cf1 -> return $ sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf1)
+           Failure err -> fail $ "Parse failed after modifications: " ++ show err
 
         ignoringIOErrors $ removeFile path
         ignoringIOErrors $ removeFile (path ++ ".bak")

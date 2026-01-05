@@ -4,12 +4,15 @@
 module Business.Flag (handleFlag) where
 
 import Core.Types
-import Core.Parser
+import Core.AST.Types (CabalAST)
+import Core.AST.Parser (parseAST)
+import Core.AST.Serializer (serializeAST)
+import Core.AST.Editor
 import Core.Safety
 import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
--- import qualified Data.Text.IO as TIO
+import qualified Data.Text.IO as TIO
 import Data.List (find)
 
 import Utils.Terminal (toggleDashboard)
@@ -18,120 +21,74 @@ import Control.Monad (foldM)
 
 handleFlag :: FlagOptions -> FilePath -> IO (Result ())
 handleFlag opts path = do
-  parseResult <- parseCabalFile path
-  case parseResult of
-    Failure err -> return $ Failure err
-    Success cabalFile -> do
-      if foInteractive opts
-        then runFlagDashboard cabalFile path opts
-        else handleSingleFlag cabalFile path opts
+  content <- TIO.readFile path
+  let ast = parseAST content
+  if foInteractive opts
+    then runFlagDashboard ast path opts
+    else handleSingleFlag ast path opts
 
-runFlagDashboard :: CabalFile -> FilePath -> FlagOptions -> IO (Result ())
-runFlagDashboard cabalFile path opts = do
-  let sections = cfSections cabalFile
-      flags = [f | FlagSection f <- sections]
+runFlagDashboard :: CabalAST -> FilePath -> FlagOptions -> IO (Result ())
+runFlagDashboard ast path opts = do
+  let flags = findFlagStanzasInAST ast
   
   if null flags
     then return $ Failure $ Error "No flags found in project" FileNotFound
     else do
-      let itemsWithStates = [(flagName f, flagDefault f) | f <- flags]
-      finalItemsWithStates <- toggleDashboard "Flag Dashboard" itemsWithStates
+      finalItemsWithStates <- toggleDashboard "Flag Dashboard" flags
       
       -- Apply changes
-      finalContentResult <- foldM (applyFlagToggle flags) (Success $ cfRawContent cabalFile) finalItemsWithStates
+      let finalASTResult = foldM applyFlagToggle ast finalItemsWithStates
+            where
+              applyFlagToggle currentAst (name, newVal) =
+                case find (\(n, v) -> n == name) flags of
+                  Just (_, oldVal) | oldVal /= newVal -> updateFlagDefaultInAST name newVal currentAst
+                  _ -> Success currentAst
       
-      case finalContentResult of
+      case finalASTResult of
         Failure err -> return $ Failure err
-        Success finalContent -> writeOrDryRun opts path (cfRawContent cabalFile) finalContent
+        Success finalAST -> 
+          let newContent = serializeAST finalAST
+              oldContent = serializeAST ast
+          in writeOrDryRun opts path oldContent newContent
 
-applyFlagToggle :: [FlagStanza] -> Result Text -> (Text, Bool) -> IO (Result Text)
-applyFlagToggle _ (Failure err) _ = return $ Failure err
-applyFlagToggle stanzas (Success currentContent) (name, newVal) = do
-  case find (\f -> flagName f == name) stanzas of
-    Nothing -> return $ Success currentContent -- Should not happen
-    Just stanza -> do
-      if flagDefault stanza == newVal
-        then return $ Success currentContent
-        else do
-          let TextSpan (TextOffset start) (TextOffset end) = flagPosition stanza
-              (before, rest) = T.splitAt start currentContent
-              (sectionContent, after) = T.splitAt (end - start) rest
-              newSectionContent = updateDefaultField newVal sectionContent
-          return $ Success $ before <> newSectionContent <> after
-
-handleSingleFlag :: CabalFile -> FilePath -> FlagOptions -> IO (Result ())
-handleSingleFlag cabalFile path opts = do
+handleSingleFlag :: CabalAST -> FilePath -> FlagOptions -> IO (Result ())
+handleSingleFlag ast path opts = do
   case foFlagName opts of
     Nothing -> return $ Failure $ Error "Flag name required for non-interactive mode" InvalidDependency
     Just name -> do
-      let sections = cfSections cabalFile
-          existingFlag = find (\case
-                                 FlagSection f -> flagName f == name
-                                 _ -> False) sections
+      let flags = findFlagStanzasInAST ast
+          existing = find (\(n, _) -> n == name) flags
       
-      case (foOperation opts, existingFlag) of
+      case (foOperation opts, existing) of
         (FlagAdd, Just _) -> return $ Failure $ Error ("Flag already exists: " <> name) InvalidDependency
-        (FlagAdd, Nothing) -> addFlag name opts cabalFile path
-        (FlagEnable, Just (FlagSection f)) -> setFlagDefault True f cabalFile path opts
-        (FlagDisable, Just (FlagSection f)) -> setFlagDefault False f cabalFile path opts
-        (FlagRemove, Just (FlagSection f)) -> removeFlag f cabalFile path opts
+        (FlagAdd, Nothing) -> 
+          case addFlagToAST name ast of
+            Failure err -> return $ Failure err
+            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+        (FlagEnable, Just _) -> 
+          case updateFlagDefaultInAST name True ast of
+            Failure err -> return $ Failure err
+            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+        (FlagDisable, Just _) -> 
+          case updateFlagDefaultInAST name False ast of
+            Failure err -> return $ Failure err
+            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+        (FlagRemove, Just _) -> 
+          case removeSectionFromAST "flag" name ast of
+            Failure err -> return $ Failure err
+            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
         (_, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
         (_, _) -> return $ Failure $ Error "Internal error: invalid flag match" ParseError
 
-addFlag :: Text -> FlagOptions -> CabalFile -> FilePath -> IO (Result ())
-addFlag name opts cabalFile path = do
-  let newStanza = T.unlines
-        [ ""
-        , "flag " <> name
-        , "    description: " <> name
-        , "    manual: True"
-        , "    default: False"
-        ]
-      oldContent = cfRawContent cabalFile
-      ls = T.lines oldContent
-      (header, rest) = span (\l -> not ("library" `T.isInfixOf` l || "executable" `T.isInfixOf` l || "common" `T.isInfixOf` l || "test-suite" `T.isInfixOf` l || "benchmark" `T.isInfixOf` l || "flag" `T.isInfixOf` l)) ls
-      newContent = T.unlines header <> newStanza <> T.unlines rest
-  
-  writeOrDryRun opts path oldContent newContent
-
-setFlagDefault :: Bool -> FlagStanza -> CabalFile -> FilePath -> FlagOptions -> IO (Result ())
-setFlagDefault val stanza cabalFile path opts = do
-  let TextSpan (TextOffset start) (TextOffset end) = flagPosition stanza
-      oldContent = cfRawContent cabalFile
-      (before, rest) = T.splitAt start oldContent
-      (sectionContent, after) = T.splitAt (end - start) rest
-      
-      newSectionContent = updateDefaultField val sectionContent
-      newContent = before <> newSectionContent <> after
-  
-  writeOrDryRun opts path oldContent newContent
-
-updateDefaultField :: Bool -> Text -> Text
-updateDefaultField val content = 
-  let ls = T.lines content
-      valStr = if val then "True" else "False"
-      newLines = map (\l -> if "default:" `T.isPrefixOf` T.toLower (T.stripStart l)
-                            then (T.takeWhile (== ' ') l) <> "default: " <> valStr
-                            else l) ls
-  in T.unlines newLines
-
-removeFlag :: FlagStanza -> CabalFile -> FilePath -> FlagOptions -> IO (Result ())
-removeFlag stanza cabalFile path opts = do
-  let TextSpan (TextOffset start) (TextOffset end) = flagPosition stanza
-      oldContent = cfRawContent cabalFile
-      (before, rest) = T.splitAt start oldContent
-      (_, after) = T.splitAt (end - start) rest
-      newContent = before <> T.dropWhile (== '\n') after
-  
-  writeOrDryRun opts path oldContent newContent
-
 writeOrDryRun :: FlagOptions -> FilePath -> Text -> Text -> IO (Result ())
 writeOrDryRun opts path oldContent newContent = 
-  if foDryRun opts
-    then do
-      logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-      let diffs = diffLines (T.lines oldContent) (T.lines newContent)
-      colorizeDiff diffs
-      return $ Success ()
-    else safeWriteCabal path newContent
+  if newContent == oldContent
+    then return $ Success ()
+    else if foDryRun opts
+      then do
+        logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+        let diffs = diffLines (T.lines oldContent) (T.lines newContent)
+        colorizeDiff diffs
+        return $ Success ()
+      else safeWriteFile path newContent
 

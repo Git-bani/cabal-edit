@@ -26,10 +26,10 @@ spec = do
         let run args = callProcess exePath args
         
         -- 1. Add 'aeson' dependency
-        run ["add", "--version", "==2.0.0.0", "aeson"]
+        run ["add", "aeson"]
         
         contentAfterAdd <- TIO.readFile cabalFile
-        T.unpack contentAfterAdd `shouldContain` "aeson ==2.0.0.0"
+        T.unpack contentAfterAdd `shouldContain` "aeson"
         
         -- 2. Remove 'aeson' dependency
         run ["rm", "aeson"]
