@@ -85,7 +85,9 @@ spec = describe "Golden Roundtrip" $ do
   it "Property: Add + Remove is semantic Identity on random names" $ hedgehog $ do
     -- Use a dummy cabal file
     let baseContent = "cabal-version: 3.0\nname: test\nversion: 0\nlibrary\n  build-depends: base\n"
-    pkgName <- forAll $ Gen.text (Range.linear 2 15) Gen.alphaNum
+    firstChar <- forAll Gen.alpha
+    rest <- forAll $ Gen.text (Range.linear 1 14) Gen.alphaNum
+    let pkgName = T.cons firstChar rest
     -- Skip 'base' to avoid confusion
     when (pkgName /= "base") $ do
       (originalDeps, finalDeps) <- evalIO $ do

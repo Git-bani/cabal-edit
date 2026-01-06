@@ -4,6 +4,7 @@
 module Business.Flag (handleFlag) where
 
 import Core.Types
+import Core.Parser
 import Core.AST.Types (CabalAST)
 import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
@@ -12,7 +13,7 @@ import Core.Safety
 import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.IO as TIO
+-- import qualified Data.Text.IO as TIO
 import Data.List (find)
 
 import Utils.Terminal (toggleDashboard)
@@ -21,11 +22,15 @@ import Control.Monad (foldM)
 
 handleFlag :: FlagOptions -> FilePath -> IO (Result ())
 handleFlag opts path = do
-  content <- TIO.readFile path
-  let ast = parseAST content
-  if foInteractive opts
-    then runFlagDashboard ast path opts
-    else handleSingleFlag ast path opts
+  parseResult <- parseCabalFile path
+  case parseResult of
+    Failure err -> return $ Failure err
+    Success cabalFile -> do
+      let content = cfRawContent cabalFile
+      let ast = parseAST content
+      if foInteractive opts
+        then runFlagDashboard ast path opts
+        else handleSingleFlag ast path opts
 
 runFlagDashboard :: CabalAST -> FilePath -> FlagOptions -> IO (Result ())
 runFlagDashboard ast path opts = do
@@ -40,7 +45,7 @@ runFlagDashboard ast path opts = do
       let finalASTResult = foldM applyFlagToggle ast finalItemsWithStates
             where
               applyFlagToggle currentAst (name, newVal) =
-                case find (\(n, v) -> n == name) flags of
+                case find (\(n, _) -> n == name) flags of
                   Just (_, oldVal) | oldVal /= newVal -> updateFlagDefaultInAST name newVal currentAst
                   _ -> Success currentAst
       
@@ -57,7 +62,7 @@ handleSingleFlag ast path opts = do
     Nothing -> return $ Failure $ Error "Flag name required for non-interactive mode" InvalidDependency
     Just name -> do
       let flags = findFlagStanzasInAST ast
-          existing = find (\(n, _) -> n == name) flags
+          existing = find (\(n, _) -> T.toLower n == T.toLower name) flags
       
       case (foOperation opts, existing) of
         (FlagAdd, Just _) -> return $ Failure $ Error ("Flag already exists: " <> name) InvalidDependency
@@ -77,8 +82,9 @@ handleSingleFlag ast path opts = do
           case removeSectionFromAST "flag" name ast of
             Failure err -> return $ Failure err
             Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
-        (_, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
-        (_, _) -> return $ Failure $ Error "Internal error: invalid flag match" ParseError
+        (FlagEnable, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
+        (FlagDisable, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
+        (FlagRemove, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
 
 writeOrDryRun :: FlagOptions -> FilePath -> Text -> Text -> IO (Result ())
 writeOrDryRun opts path oldContent newContent = 
@@ -91,4 +97,3 @@ writeOrDryRun opts path oldContent newContent =
         colorizeDiff diffs
         return $ Success ()
       else safeWriteFile path newContent
-

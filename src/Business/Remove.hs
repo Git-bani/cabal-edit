@@ -9,7 +9,6 @@ import Core.AST.Serializer (serializeAST)
 import Core.AST.Editor (removeDependencyFromAST, findDependencyInAST)
 import Core.Safety
 import Utils.Logging (logInfo)
-import Utils.Config (loadConfig, Config(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 -- import qualified Data.Text.IO as TIO
@@ -43,7 +42,7 @@ removeDependency opts path = do
       -- 3. Process each package
           let initialContent = cfRawContent cabalFile
           
-          finalContentResult <- foldM (processPackageRemove opts cabalFile) (Success initialContent) packageNames
+          finalContentResult <- foldM (processPackageRemove opts) (Success initialContent) packageNames
           
           case finalContentResult of
             Failure err -> return $ Failure err
@@ -56,9 +55,9 @@ removeDependency opts path = do
                   return $ Success ()
                 else safeWriteFile path finalContent
 
-processPackageRemove :: RemoveOptions -> CabalFile -> Result Text -> Text -> IO (Result Text)
-processPackageRemove _ _ (Failure err) _ = return $ Failure err
-processPackageRemove opts cabalFile (Success currentContent) pkgNameText = do
+processPackageRemove :: RemoveOptions -> Result Text -> Text -> IO (Result Text)
+processPackageRemove _ (Failure err) _ = return $ Failure err
+processPackageRemove opts (Success currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
     Left err -> return $ Failure $ Error err InvalidDependency
     Right pkgName -> do
@@ -76,7 +75,7 @@ processPackageRemove opts cabalFile (Success currentContent) pkgNameText = do
             other -> [other]
             
       -- Apply removal to all targets
-      let result = foldl (applyRemoval pkgName cabalFile) (Success currentContent) targets
+      let result = foldl (applyRemoval pkgName) (Success currentContent) targets
       
       -- If nothing was removed (content same as before), and we didn't already have a failure, return error
       case result of
@@ -84,25 +83,9 @@ processPackageRemove opts cabalFile (Success currentContent) pkgNameText = do
           return $ Failure $ Error ("Dependency not found: " <> unPackageName pkgName) InvalidDependency
         other -> return other
 
-hasDependency :: PackageName -> Section -> Bool
-hasDependency name sec = any (\d -> depName d == name) (findDependencies sec)
-
-sectionToTarget :: Section -> SectionTarget
-sectionToTarget (LibrarySection lib) = case libName lib of
-  Nothing -> TargetLib
-  Just n -> TargetNamed n
-sectionToTarget (ExecutableSection exe) = TargetExe (Just $ exeName exe)
-sectionToTarget (TestSuiteSection test) = TargetTest (Just $ testName test)
-sectionToTarget (BenchmarkSection bench) = TargetBench (Just $ benchName bench)
-sectionToTarget (CommonStanzaSection common) = TargetNamed (commonName common)
-sectionToTarget (FlagSection f) = TargetCommon (Just $ flagName f) -- Reusing TargetCommon or add TargetFlag?
--- Let's use TargetNamed for now as it's safe.
--- Actually, let's use TargetNamed.
-sectionToTarget (UnknownSection name _) = TargetNamed name
-
-applyRemoval :: PackageName -> CabalFile -> Result Text -> SectionTarget -> Result Text
-applyRemoval _ _ (Failure err) _ = Failure err
-applyRemoval pkgName _ (Success content) target =
+applyRemoval :: PackageName -> Result Text -> SectionTarget -> Result Text
+applyRemoval _ (Failure err) _ = Failure err
+applyRemoval pkgName (Success content) target =
   let (targetName, condition) = case target of
         TargetConditional (TargetNamed n) c -> (n, Just c)
         TargetConditional base c -> (describeTarget base, Just c)
@@ -121,7 +104,3 @@ describeTarget (TargetTest mn) = T.unwords $ ["test-suite"] ++ maybeToList mn
 describeTarget (TargetBench mn) = T.unwords $ ["benchmark"] ++ maybeToList mn
 describeTarget (TargetCommon mn) = T.unwords $ ["common"] ++ maybeToList mn
 describeTarget (TargetConditional base _) = describeTarget base
-
-
--- ... keep helper describeSection if needed or reuse ...
-

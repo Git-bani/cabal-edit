@@ -115,7 +115,9 @@ test-suite cabal-edit-test
                     , Business.RemoveSpec
                     , Business.ValidationSpec
                     , Business.SetVersionSpec
+                    , Business.SetVersionOutlierSpec
                     , Business.FlagSpec
+                    , Business.FlagOutlierSpec
                     , Business.ListSpec
                     , Business.SubLibrarySpec
                     , Business.SourceDepSpec
@@ -130,6 +132,7 @@ test-suite cabal-edit-test
                     , Golden.RoundtripSpec
                     , Core.AST.RoundtripSpec
                     , Core.AST.EditorSpec
+                    , Core.AST.EditorOutlierSpec
     build-tool-depends: hspec-discover:hspec-discover
     build-depends:    base
                     , cabal-edit-internal

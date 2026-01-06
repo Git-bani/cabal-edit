@@ -25,6 +25,25 @@ This will:
 2. Add it to the `build-depends` section of your `.cabal` file.
 3. Preserve your existing formatting and comments.
 
+**Interactive Search:**
+
+If you are unsure of the exact package name, or want to explore Hackage, use the interactive mode:
+
+```bash
+cabal-edit add -i json
+```
+
+This searches Hackage for "json" and presents a selectable list of matching packages.
+
+**Renaming Dependencies (Mixins):**
+
+You can add a dependency under a different name (aliasing) using the `-r` or `--rename` flag with the syntax `alias:package`. This generates a `mixins` field in your Cabal file.
+
+```bash
+# Adds 'aeson' but lets you import it as 'JSON'
+cabal-edit add -r "JSON:aeson"
+```
+
 **Adding with constraints:**
 
 ```bash
@@ -68,6 +87,14 @@ To remove a library:
 
 ```bash
 cabal-edit rm old-library
+```
+
+**Interactive Removal:**
+
+To visually select which dependencies to remove from a list:
+
+```bash
+cabal-edit rm -i
 ```
 
 ### 3. Listing Dependencies
@@ -140,7 +167,7 @@ cabal-edit add lens --dry-run
 The output will show a `git diff` style view, with removed lines in Red and added lines in Green.
 
 **Surgical Edits:**
-Unlike many tools that re-render the entire file (and lose your comments/formatting), `cabal-edit` performs "surgical" text edits. It identifies the exact lines to change and modifies them while keeping the rest of the file untouched.
+Unlike many tools that re-render the entire file (and lose your comments/formatting), `cabal-edit` performs "surgical" text edits using a high-fidelity AST parser. It identifies the exact lines to change and modifies them while keeping the rest of the file untouched.
 
 **Atomic Writes:**
 To prevent file corruption during power failures or crashes, `cabal-edit` writes to a temporary file first and then atomically moves it to the final destination.

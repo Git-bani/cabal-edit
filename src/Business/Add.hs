@@ -12,7 +12,6 @@ import Core.DependencyResolver
 import Core.ProjectEditor
 import Core.ProjectContext (ProjectContext)
 import Utils.Logging (logInfo, logError, logWarning)
-import Utils.Config (loadConfig, Config(..))
 import Utils.Terminal (selectItems)
 import External.Hackage (searchPackages)
 import Data.Text (Text)

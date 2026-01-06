@@ -16,7 +16,7 @@ where
 
 import Core.AST.Types
 import Core.Types (Dependency(..), mkPackageName, unPackageName, Result(..), Error(..), ErrorCode(..), DependencyType(..), VersionConstraint(..), Version(..))
-import Core.Serializer (formatDependency)
+import Core.AST.Serializer (formatDependency)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (find, findIndex)

@@ -33,6 +33,13 @@ cabal-edit add text
 # Add with explicit version constraint
 cabal-edit add aeson --version "^>= 2.0"
 
+# Interactive Search: search Hackage and select packages
+cabal-edit add -i json
+
+# Rename/Alias a dependency (Mixins)
+# Adds 'aeson' but exposes it as 'json' in your code
+cabal-edit add -r "json:aeson"
+
 # Add to a specific section (library, executable, test-suite, benchmark)
 cabal-edit add hspec --section test-suite --dev
 
@@ -146,7 +153,9 @@ cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 ## Features
 
 - ✅ **Smart Add**: Resolves latest versions from Hackage automatically (with offline fallback).
-- ✅ **Surgical Remove**: Safely removes dependencies while preserving file structure.
+- ✅ **Interactive Search**: Search Hackage and select packages to add from a TUI list.
+- ✅ **Renaming Support**: Add dependencies with aliases (Mixins) using `alias:package` syntax.
+- ✅ **Surgical Editing**: Safely modifies `.cabal` files using an AST-based editor, preserving all comments, indentation, and structure.
 - ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
 - ✅ **Flag Dashboard**: Visual TUI to toggle Cabal flags interactively.
 - ✅ **Interactive Removal**: Checklist-style selection for removing multiple packages.
@@ -154,12 +163,10 @@ cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 - ✅ **Version Management**: Set project version from the CLI.
 - ✅ **Hpack Support**: Automatically detects and edits `package.yaml` files when present.
 - ✅ **Workspace Support**: Full support for `cabal.project` and multi-package setups.
-- ✅ **Format Preservation**: Preserves comments, indentation, and leading/trailing comma styles.
 - ✅ **Advanced Safety**: 
     - **Atomic Writes**: Uses temporary files and atomic moves to prevent file corruption.
     - **In-memory Verification**: Validates Cabal file syntax before committing changes.
     - **TTY Detection**: Clean output in non-terminal environments (no junk characters).
-    - **Dry Run Support**: Every modifying command supports `--dry-run`.
 
 ## Development
 
