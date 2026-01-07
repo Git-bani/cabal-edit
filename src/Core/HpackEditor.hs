@@ -6,7 +6,6 @@ module Core.HpackEditor
   ) where
 
 import Core.Types
-import Core.Types
 import Data.Text (Text)
 import qualified Data.Text as T
 

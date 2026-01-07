@@ -33,6 +33,7 @@ common warnings
 library
     import:           warnings
     exposed-modules:  Distribution.CabalEdit
+    other-modules:    Paths_cabal_edit
     build-depends:    base >=4.14 && <5
                     , cabal-edit-internal
     hs-source-dirs:   src-public
@@ -85,6 +86,7 @@ library cabal-edit-internal
 executable cabal-edit
     import:           warnings
     main-is:          Main.hs
+    other-modules:    Paths_cabal_edit
     build-depends:    base
                     , cabal-edit-internal
                     , optparse-applicative >=0.16 && <0.19

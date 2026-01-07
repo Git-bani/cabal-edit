@@ -43,8 +43,7 @@ addSourceRepository path url tag = do
     else do
       let newBlock = formatSourceRepoBlock url tag
       let newContent = appendBlock content newBlock
-      _ <- safeWriteFile path newContent
-      return $ Success ()
+      safeWriteFile path newContent
 
 -- | Add a local package path to packages: section
 addLocalPackage :: FilePath -> Text -> IO (Result ())
@@ -61,8 +60,7 @@ addLocalPackage path localPath = do
       
       let newField = "\npackages: " <> localPath <> "\n"
       let newContent = content <> newField
-      _ <- safeWriteFile path newContent
-      return $ Success ()
+      safeWriteFile path newContent
 
 formatSourceRepoBlock :: Text -> Maybe Text -> Text
 formatSourceRepoBlock url tag = 

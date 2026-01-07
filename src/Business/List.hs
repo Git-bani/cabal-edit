@@ -8,9 +8,8 @@ import Core.AST.Parser (parseAST)
 import Core.AST.Editor (findDependenciesInAST)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.List (sort, groupBy, sortOn)
+import Data.List (groupBy, sortOn)
 import Data.Function (on)
-import Control.Monad (forM_)
 import qualified Distribution.Pretty as DP
 
 listDependencies :: ListOptions -> FilePath -> IO (Result ())
