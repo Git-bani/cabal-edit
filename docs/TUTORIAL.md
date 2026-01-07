@@ -167,7 +167,7 @@ cabal-edit add lens --dry-run
 The output will show a `git diff` style view, with removed lines in Red and added lines in Green.
 
 **Surgical Edits:**
-Unlike many tools that re-render the entire file (and lose your comments/formatting), `cabal-edit` performs "surgical" text edits using a high-fidelity AST parser. It identifies the exact lines to change and modifies them while keeping the rest of the file untouched.
+Unlike tools that re-format the entire file (often losing comments or custom alignment), `cabal-edit` uses a **high-fidelity AST engine**. It parses your `.cabal` file into a lossless structure that captures every comment, empty line, and indentation choice. When you add or remove a dependency, `cabal-edit` modifies only the relevant nodes in the AST and serializes it back, guaranteeing byte-for-byte fidelity for all unmodified parts.
 
 **Atomic Writes:**
 To prevent file corruption during power failures or crashes, `cabal-edit` writes to a temporary file first and then atomically moves it to the final destination.

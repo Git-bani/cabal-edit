@@ -38,13 +38,14 @@ We welcome contributions to `cabal-edit`! Please follow these guidelines to ensu
 ## Project Structure
 
 - `src/`: Source code
-  - `Core/`: Core logic (Types, Parser, Serializer)
-  - `Business/`: Business logic (Add, Remove, Upgrade)
-  - `External/`: External integrations (Hackage, Network)
-  - `Utils/`: Utilities (Logging, Config)
+  - `Core/`: Foundational types and project context.
+    - `AST/`: The high-fidelity lossless parser and editor engine.
+  - `Business/`: High-level command logic (Add, Remove, Upgrade, Flag, etc.).
+  - `External/`: Integrations with Hackage and network utilities.
+  - `Utils/`: Logging, configuration, and terminal UI utilities.
 - `test/`: Test suite
-  - `Core/`, `Business/`, `Integration/`: Test modules
-- `app/`: CLI entry point
+  - `Core/`, `Business/`, `Integration/`, `Golden/`: Comprehensive test modules.
+- `app/`: CLI entry point (`Main.hs`).
 
 ## Reporting Issues
 

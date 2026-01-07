@@ -7,12 +7,14 @@
 ### Core Layer (`src/Core/`)
 
 - **Types.hs**: Defines the core data structures (`CabalFile`, `Dependency`, `Section`).
-- **Parser.hs**: Handles parsing of `.cabal` files while preserving raw content for exact round-tripping.
-- **Serializer.hs**: Manages the serialization and surgical editing of file content (insertions/deletions).
+- **AST/Types.hs**: Defines the high-fidelity AST representation of a Cabal file.
+- **AST/Parser.hs**: Lossless parser that captures comments, whitespace, and line endings into the AST.
+- **AST/Serializer.hs**: Converts the AST back to text, guaranteeing byte-for-byte fidelity for unmodified parts.
+- **AST/Editor.hs**: Performs high-level manipulations (add/remove/update) directly on the AST.
 - **HpackEditor.hs**: Provides surgical editing for `package.yaml` (Hpack) files.
 - **DependencyResolver.hs**: Logic for resolving versions against Hackage.
 - **ProjectContext.hs**: Handles workspace logic (`cabal.project` parsing).
-- **Safety.hs**: Provides file locking and verification mechanisms.
+- **Safety.hs**: Provides atomic file writes and syntax verification mechanisms.
 
 ### Business Layer (`src/Business/`)
 
@@ -39,17 +41,32 @@
 
 ## Data Types
 
-### `CabalFile`
+### `CabalFile` (Legacy Container)
 
-Represents a parsed Cabal file with metadata for format preservation.
+Represents a basic parsed view of a Cabal file. In the new engine, this is primarily used for metadata, while `CabalAST` handles editing.
 
 ```haskell
 data CabalFile = CabalFile
   { cfPackageName :: PackageName
   , cfSections :: [Section]
   , cfRawContent :: Text
-  , cfLineEndings :: Text -- "\n" or "\r\n"
+  , cfLineEndings :: Text
   }
+```
+
+### `CabalAST` (Primary Editor Data Structure)
+
+A high-fidelity tree structure that captures every detail of the source file, including comments and whitespace.
+
+```haskell
+newtype CabalAST = CabalAST { unCabalAST :: [CabalItem] }
+
+data CabalItem
+  = FieldItem FieldLine
+  | SectionItem SectionLine [CabalItem]
+  | IfBlock IfLine [CabalItem] (Maybe (ElseLine, [CabalItem]))
+  | CommentItem Text Text
+  | EmptyLineItem Text Text
 ```
 
 ### `Dependency`

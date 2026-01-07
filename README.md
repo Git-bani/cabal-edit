@@ -141,6 +141,16 @@ cabal-edit -w upgrade
 cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 ```
 
+## How it Works
+
+`cabal-edit` differentiates itself from other tools by its **lossless editing architecture**:
+
+1.  **Parse**: The tool parses your `.cabal` file into a high-fidelity AST (Abstract Syntax Tree). Unlike standard parsers, ours captures "junk" data like comments, trailing whitespace, and specific line endings (LF vs CRLF).
+2.  **Edit**: Modifying operations (like adding a dependency) are performed directly on the AST nodes.
+3.  **Serialize**: The modified AST is written back to text. Because the AST is lossless, any part of the file not explicitly touched by your command remains identical down to the last byte.
+
+This ensures that `cabal-edit` is safe to use on any codebase, no matter how "artisanal" the formatting is.
+
 ## Supported GHC Versions
 
 `cabal-edit` is compatible with **GHC 8.10.1** and newer. It is officially tested on:
@@ -152,10 +162,11 @@ cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 
 ## Features
 
+- ✅ **Industrial-Grade Core**: Powered by a lossless AST engine that captures every detail of your source file.
+- ✅ **Surgical Editing**: Guaranteed byte-for-byte fidelity for all unmodified parts. Preserves all comments, indentation, and structure.
 - ✅ **Smart Add**: Resolves latest versions from Hackage automatically (with offline fallback).
 - ✅ **Interactive Search**: Search Hackage and select packages to add from a TUI list.
 - ✅ **Renaming Support**: Add dependencies with aliases (Mixins) using `alias:package` syntax.
-- ✅ **Surgical Editing**: Safely modifies `.cabal` files using an AST-based editor, preserving all comments, indentation, and structure.
 - ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
 - ✅ **Flag Dashboard**: Visual TUI to toggle Cabal flags interactively.
 - ✅ **Interactive Removal**: Checklist-style selection for removing multiple packages.
