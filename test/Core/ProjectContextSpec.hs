@@ -5,6 +5,15 @@ module Core.ProjectContextSpec (spec) where
 import Test.Hspec
 import Core.ProjectContext
 import System.Directory
+  ( getCurrentDirectory
+  , createDirectoryIfMissing
+  , removeDirectoryRecursive
+  , setCurrentDirectory
+  , doesFileExist
+  , listDirectory
+  , doesDirectoryExist
+  , getTemporaryDirectory
+  )
 import System.FilePath
 import qualified Data.Text.IO as TIO
 import Control.Exception (bracket, catch, IOException)
@@ -75,7 +84,8 @@ withTempWorkspace action = withTempDir $ \dir -> do
 withTempDir :: (FilePath -> IO a) -> IO a
 withTempDir action = do
   cwd <- getCurrentDirectory
-  let path = cwd </> "spec_temp_workspace"
+  sysTemp <- getTemporaryDirectory
+  let path = sysTemp </> "spec_temp_workspace"
   
   bracket 
     (createDirectoryIfMissing True path >> return path)

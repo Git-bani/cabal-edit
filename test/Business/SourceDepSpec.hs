@@ -8,7 +8,7 @@ import Core.Types
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.Directory (getCurrentDirectory, removeFile, setCurrentDirectory, createDirectoryIfMissing, removeDirectoryRecursive)
+import System.Directory (getCurrentDirectory, removeFile, setCurrentDirectory, createDirectoryIfMissing, removeDirectoryRecursive, getTemporaryDirectory)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
 
@@ -97,8 +97,8 @@ isSuccess _ = False
 
 withTempEnv :: Text -> (FilePath -> FilePath -> FilePath -> IO a) -> IO a
 withTempEnv content action = do
-  cwd <- getCurrentDirectory
-  let tempDir = cwd </> "temp_source_dep_test"
+  sysTemp <- getTemporaryDirectory
+  let tempDir = sysTemp </> "temp_source_dep_test"
   let cabalPath = tempDir </> "test.cabal"
   let projPath = tempDir </> "cabal.project"
   

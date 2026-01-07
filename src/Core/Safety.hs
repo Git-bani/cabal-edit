@@ -15,29 +15,33 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory (copyFile, createDirectory, removeDirectory, renameFile, removeFile)
 import System.FilePath ((<.>))
-import Control.Exception (bracket, throwIO, catch, IOException, onException)
+import Control.Exception (bracket, catch, IOException, onException)
 import qualified Distribution.PackageDescription.Parsec as Cabal
 import qualified Data.ByteString as BS
 import Control.Concurrent (threadDelay)
 import Data.Text.Encoding (encodeUtf8)
 
 -- | Simple directory-based locking
-withFileLock :: FilePath -> IO a -> IO a
+withFileLock :: FilePath -> IO (Result a) -> IO (Result a)
 withFileLock path action = do
   let lockPath = path <.> "lock"
   logDebug $ "Acquiring lock: " <> T.pack lockPath
-  bracket (acquireLock lockPath 10)
-          (\_ -> do
-              logDebug $ "Releasing lock: " <> T.pack lockPath
-              releaseLock lockPath)
-          (\_ -> action)
+  acq <- acquireLock lockPath 10
+  case acq of
+    Left err -> return $ Failure err
+    Right () -> bracket
+      (return ())
+      (\_ -> do
+          logDebug $ "Releasing lock: " <> T.pack lockPath
+          releaseLock lockPath)
+      (\_ -> action)
 
-acquireLock :: FilePath -> Int -> IO ()
-acquireLock lockPath 0 = throwIO $ Error ("Could not acquire lock: " <> T.pack lockPath) FileModificationError
+acquireLock :: FilePath -> Int -> IO (Either Error ())
+acquireLock lockPath 0 = return $ Left $ Error ("Could not acquire lock: " <> T.pack lockPath) FileModificationError
 acquireLock lockPath retries = do
   result <- tryCreate lockPath
   case result of
-    True -> return ()
+    True -> return $ Right ()
     False -> do
       threadDelay 100000 -- 100ms
       acquireLock lockPath (retries - 1)
