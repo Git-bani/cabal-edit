@@ -4,9 +4,9 @@ module Main (main) where
 
 import Criterion.Main
 import Core.AST.Parser
-import Core.AST.Serializer
 import Core.AST.Editor
 import Core.Types
+import Utils.Diff
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -16,14 +16,25 @@ main = defaultMain
       [ bench "parse sample content" $ nf parseAST sampleContent
       , bench "parse complex content" $ nf parseAST complexContent
       ]
-  , bgroup "AST Serializer"
-      [ bench "serialize sample AST" $ nf (serializeAST . parseAST) sampleContent
-      , bench "serialize complex AST" $ nf (serializeAST . parseAST) complexContent
-      ]
   , bgroup "AST Editor"
       [ bench "add dependency" $ nf (addDependencyToAST "library" Nothing sampleDep) (parseAST sampleContent)
       , bench "remove dependency" $ nf (removeDependencyFromAST "library" Nothing "text") (parseAST sampleContent)
-      , bench "update project version" $ nf (updateFieldInAST "version" "1.2.3.4") (parseAST complexContent)
+      ]
+  , bgroup "Scaling (O(N))"
+      [ bench "parse 100 deps" $ nf parseAST (massiveContent 100)
+      , bench "parse 1000 deps" $ nf parseAST (massiveContent 1000)
+      , bench "parse 5000 deps" $ nf parseAST (massiveContent 5000)
+      , bench "add to 5000 deps" $ nf (addDependencyToAST "library" Nothing sampleDep) (parseAST (massiveContent 5000))
+      ]
+  , bgroup "Diff Engine"
+      [ bench "diff 100 lines (small change)" $ 
+          let c1 = massiveContent 100
+              c2 = massiveContent 101
+          in nf (diffLines (T.lines c1)) (T.lines c2)
+      , bench "diff 1000 lines (small change)" $ 
+          let c1 = massiveContent 1000
+              c2 = massiveContent 1001
+          in nf (diffLines (T.lines c1)) (T.lines c2)
       ]
   ]
 
@@ -56,3 +67,12 @@ complexContent = T.unlines
   , "    if os(linux)"
   , "        build-depends: unix"
   ]
+
+massiveContent :: Int -> Text
+massiveContent n = T.unlines $
+  [ "cabal-version: 3.0"
+  , "name: massive"
+  , "version: 1.0"
+  , "library"
+  , "  build-depends: base"
+  ] ++ [ "               , dep-" <> T.pack (show i) | i <- [1..n] ]

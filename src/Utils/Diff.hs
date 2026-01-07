@@ -1,12 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module Utils.Diff (diffLines, colorizeDiff, Diff(..)) where
 
 import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import System.Console.ANSI
+import GHC.Generics (Generic)
+import Control.DeepSeq (NFData)
 
 data Diff a = Both a | First a | Second a
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic, NFData)
 
 diffLines :: Eq a => [a] -> [a] -> [Diff a]
 diffLines xs ys = 
