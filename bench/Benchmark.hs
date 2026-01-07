@@ -1,47 +1,34 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Main where
+module Main (main) where
 
 import Criterion.Main
-import Core.Parser
-import Core.Serializer
+import Core.AST.Parser
+import Core.AST.Serializer
+import Core.AST.Editor
 import Core.Types
-import Business.SetVersion
 import Data.Text (Text)
 import qualified Data.Text as T
 
 main :: IO ()
 main = defaultMain
-  [ bgroup "parser"
-      [ bench "scan common stanzas" $ nf scanCommonStanzas complexContent
-      , bench "find conditional position" $ nf (findConditionalPosition "os(windows)") complexContent
-      , bench "parse common deps" $ nf (parseCommonDeps complexContent) (TextSpan 300 500)
+  [ bgroup "AST Parser"
+      [ bench "parse sample content" $ nf parseAST sampleContent
+      , bench "parse complex content" $ nf parseAST complexContent
       ]
-  , bgroup "serializer"
-      [ bench "insert dependency (leading comma)" $ nf (insertDependencyLine "\n" True sampleDep) sampleContent
-      , bench "insert dependency (trailing comma)" $ nf (insertDependencyLine "\n" False sampleDep) sampleContent
-      , bench "insert duplicate dependency" $ nf (insertDependencyLine "\n" True duplicateDep) sampleContent
-      , bench "remove dependency" $ nf (removeDependencyLine "\n" True sampleDep) sampleContent
-      , bench "update project version" $ nf (updateProjectVersion "1.2.3.4") complexContent
+  , bgroup "AST Serializer"
+      [ bench "serialize sample AST" $ nf (serializeAST . parseAST) sampleContent
+      , bench "serialize complex AST" $ nf (serializeAST . parseAST) complexContent
       ]
-  , bgroup "targeting"
-      [ bench "resolve target bounds (conditional)" $ nf (resolveTargetBounds (TargetConditional TargetLib "os(windows)") dummyCabal) complexContent
+  , bgroup "AST Editor"
+      [ bench "add dependency" $ nf (addDependencyToAST "library" Nothing sampleDep) (parseAST sampleContent)
+      , bench "remove dependency" $ nf (removeDependencyFromAST "library" Nothing "text") (parseAST sampleContent)
+      , bench "update project version" $ nf (updateFieldInAST "version" "1.2.3.4") (parseAST complexContent)
       ]
   ]
 
 sampleDep :: Dependency
 sampleDep = Dependency (trustedMkPackageName "new-package") (Just (MajorBoundVersion (Version [1,2,3]))) BuildDepends
-
-duplicateDep :: Dependency
-duplicateDep = Dependency (trustedMkPackageName "base") Nothing BuildDepends
-
-dummyCabal :: CabalFile
-dummyCabal = CabalFile 
-  { cfPackageName = trustedMkPackageName "test"
-  , cfSections = [LibrarySection (Library Nothing [] (TextSpan 0 1000))]
-  , cfRawContent = ""
-  , cfLineEndings = "\n"
-  }
 
 sampleContent :: Text
 sampleContent = T.unlines
