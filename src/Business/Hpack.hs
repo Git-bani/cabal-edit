@@ -4,7 +4,6 @@ module Business.Hpack (addHpackDependency, removeHpackDependency) where
 
 import Core.Types
 import Core.HpackEditor
-import Core.Serializer (DependencyOperation(..))
 import Core.Safety
 import Core.DependencyResolver
 import Utils.Logging (logInfo)

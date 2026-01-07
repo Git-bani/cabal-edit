@@ -16,6 +16,7 @@ module Core.Types
   , FlagStanza(..)
   , Dependency(..)
   , DependencyType(..)
+  , DependencyOperation(..)
   , VersionConstraint(..)
   , VersionRange(..)
   , BoundType(..)
@@ -173,6 +174,9 @@ instance Ord Dependency where
   compare d1 d2 = compare (depName d1) (depName d2)
 
 data DependencyType = BuildDepends | TestDepends | BenchmarkDepends
+  deriving (Show, Eq, Generic, NFData)
+
+data DependencyOperation = Add | Remove | Update
   deriving (Show, Eq, Generic, NFData)
 
 -- Version constraint handling

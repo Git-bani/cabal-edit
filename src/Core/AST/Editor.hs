@@ -20,7 +20,7 @@ import Core.AST.Serializer (formatDependency)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (find, findIndex)
-import Data.Char (isAlphaNum, isSpace)
+import Data.Char (isSpace)
 import Data.Maybe (mapMaybe, isNothing)
 import Text.Read (readMaybe)
 
@@ -94,11 +94,12 @@ findFlagStanzasInAST (CabalAST items) =
 -- | Add a new flag to the AST
 addFlagToAST :: Text -> CabalAST -> Result CabalAST
 addFlagToAST name (CabalAST items) =
-  let newStanza = SectionItem (SectionLine 0 "flag" name)
-        [ FieldItem (FieldLine 4 "description" (" " <> name))
-        , FieldItem (FieldLine 4 "manual" " True")
-        , FieldItem (FieldLine 4 "default" " False")
-        , EmptyLineItem ""
+  let term = detectDefaultTerminator items
+      newStanza = SectionItem (SectionLine 0 "flag" name term)
+        [ FieldItem (FieldLine 4 "description" (" " <> name) term)
+        , FieldItem (FieldLine 4 "manual" " True" term)
+        , FieldItem (FieldLine 4 "default" " False" term)
+        , EmptyLineItem "" term
         ]
       -- Find a good place to insert (before library or first section)
       idx = case findIndex isSection items of
@@ -106,6 +107,19 @@ addFlagToAST name (CabalAST items) =
               Nothing -> length items
       updatedItems = take idx items ++ [newStanza] ++ drop idx items
   in Success $ CabalAST updatedItems
+
+detectDefaultTerminator :: [CabalItem] -> Text
+detectDefaultTerminator items =
+  case mapMaybe getItemTerminator items of
+    (t:_) -> t
+    [] -> "\n"
+
+getItemTerminator :: CabalItem -> Maybe Text
+getItemTerminator (FieldItem fl) = Just (fieldLineEnding fl)
+getItemTerminator (SectionItem sl _) = Just (sectionLineEnding sl)
+getItemTerminator (IfBlock il _ _) = Just (ifLineEnding il)
+getItemTerminator (CommentItem _ t) = Just t
+getItemTerminator (EmptyLineItem _ t) = Just t
 
 isSection :: CabalItem -> Bool
 isSection (SectionItem _ _) = True
@@ -125,7 +139,8 @@ updateSpecificFlag targetName val (SectionItem sl children)
       let valStr = if val then "True" else "False"
           (updatedChildren, found) = runUpdate (updateField "default" valStr) children
           -- If 'default' field not found, add it
-          finalChildren = if found then updatedChildren else updatedChildren ++ [FieldItem (FieldLine 4 "default" (" " <> valStr))]
+          term = sectionLineEnding sl
+          finalChildren = if found then updatedChildren else updatedChildren ++ [FieldItem (FieldLine 4 "default" (" " <> valStr) term)]
       in (SectionItem sl finalChildren, True)
 updateSpecificFlag _ _ item = (item, False)
 
@@ -155,7 +170,7 @@ removeDependencyFromAST targetSection mCondition pkgName (CabalAST items) =
 -- | Find all (SectionName, Maybe Condition) pairs where a package is used
 findDependencyInAST :: Text -> CabalAST -> [(Text, Maybe Text)]
 findDependencyInAST pkgName ast = 
-  map (\(s, c, _) -> (s, c)) $ filter (\(_, _, d) -> unPackageName (depName d) == pkgName) (findDependenciesInAST ast)
+  map (\(s, c, _) -> (s, c)) $ filter (\( _, _, d) -> unPackageName (depName d) == pkgName) (findDependenciesInAST ast)
 
 -- | Find all dependencies in the AST with their locations
 findDependenciesInAST :: CabalAST -> [(Text, Maybe Text, Dependency)]
@@ -186,9 +201,21 @@ findDependenciesInAST (CabalAST items) =
 
 parseFieldDependencies :: Text -> [Dependency]
 parseFieldDependencies val =
-  let ls = T.splitOn "\n" val
-      parts = concatMap (T.splitOn ",") ls
+  let ls = splitPreservingLineEndings val
+      parts = concatMap (T.splitOn ",") (map fst ls)
   in mapMaybe parseDependencyText parts
+
+splitPreservingLineEndings :: Text -> [(Text, Text)]
+splitPreservingLineEndings t
+  | T.null t = []
+  | otherwise = 
+      let (line, rest) = T.break (`elem` ['\n', '\r']) t
+          (term, rest') = if "\r\n" `T.isPrefixOf` rest
+                          then ("\r\n", T.drop 2 rest)
+                          else if "\n" `T.isPrefixOf` rest
+                               then ("\n", T.drop 1 rest)
+                               else ("", "")
+      in (line, term) : splitPreservingLineEndings rest'
 
 parseDependencyText :: Text -> Maybe Dependency
 parseDependencyText depStr =
@@ -256,7 +283,8 @@ updateSection target mCond f (SectionItem sl children)
           in if found 
              then (Just (SectionItem sl updatedChildren), True)
              else -- Create new if block if not found
-               let newIf = IfBlock (IfLine (sectionIndent sl + 4) cond) (f []) Nothing
+               let term = sectionLineEnding sl
+                   newIf = IfBlock (IfLine (sectionIndent sl + 4) cond term) (f []) Nothing
                in (Just (SectionItem sl (children ++ [newIf])), True)
   | otherwise = 
       let (updatedChildren, found) = runUpdateFilter (updateSection target mCond f) children
@@ -286,7 +314,7 @@ isEmptyBlock :: [CabalItem] -> Bool
 isEmptyBlock = all isEmptyItem
 
 isEmptyItem :: CabalItem -> Bool
-isEmptyItem (EmptyLineItem _) = True
+isEmptyItem (EmptyLineItem _ _) = True
 isEmptyItem (FieldItem fl) = T.null (T.strip (fieldValue fl)) && T.isPrefixOf "--" (T.strip (fieldName fl)) -- Consider comment-only fields as empty? No, fieldName shouldn't be comment.
 isEmptyItem _ = False
 
@@ -327,7 +355,8 @@ ensureBuildDepends items =
     -- Find a good place to insert build-depends (after last field or at start)
     -- For now, just append it
     let indent = detectBaseIndentAST items
-        newField = FieldItem (FieldLine indent "build-depends" "")
+        term = detectDefaultTerminator items
+        newField = FieldItem (FieldLine indent "build-depends" "" term)
     in items ++ [newField]
 
 detectBaseIndentAST :: [CabalItem] -> Int
@@ -371,45 +400,42 @@ addOrUpdateDepInField dep fl =
 
 isPkgInText :: Text -> Text -> Bool
 isPkgInText pkg txt = 
-  let parts = concatMap (T.splitOn ",") (T.splitOn "\n" txt)
+  let parts = concatMap (T.splitOn ",") (map fst $ splitPreservingLineEndings txt)
   in any (isPkgInPart pkg) parts
 
 isPkgInPart :: Text -> Text -> Bool
 isPkgInPart pkg part =
   let trimmed = T.strip part
-      word = T.takeWhile isPkgChar trimmed
-      rest = T.stripStart $ T.drop (T.length word) trimmed
-      isValidNext = T.null rest || (case T.uncons rest of
-                                     Just (c, _) -> isVersionOpStart c || isSpace c
-                                     Nothing -> True)
-  in not (T.null word) && T.toLower pkg == T.toLower word && isValidNext
-
-isPkgInLine :: Text -> Text -> Bool
-isPkgInLine = isPkgInPart 
-
-isPkgChar :: Char -> Bool
-isPkgChar c = isAlphaNum c || c == '-' || c == ':'
+      -- Remove leading comma for the check
+      cleanPart = if "," `T.isPrefixOf` trimmed then T.strip (T.drop 1 trimmed) else trimmed
+      -- The package name is the first word in the part
+      words' = T.words cleanPart
+  in case words' of
+    (word:_) -> T.toLower pkg == T.toLower word
+    [] -> False
 
 addNewDep :: Dependency -> FieldLine -> FieldLine
 addNewDep dep fl = 
   let val = fieldValue fl
-      lines' = T.splitOn "\n" val
+      ls = splitPreservingLineEndings val
       baseIndent = fieldIndent fl
-  in case lines' of
-    [s] -> 
+      -- Use a real newline if the field terminator is empty (EOF case)
+      term = if T.null (fieldLineEnding fl) then "\n" else fieldLineEnding fl
+  in case ls of
+    [(s, _)] -> 
       let depStr = formatDependency dep
           newVal = if T.null (T.strip s) 
                    then " " <> depStr 
                    else s <> ", " <> depStr
       in fl { fieldValue = newVal }
-    (firstLine:restLines) ->
-      let nonCommentRest = filter (not . T.isPrefixOf "--" . T.stripStart) restLines
-          style = if any (T.isPrefixOf "," . T.stripStart) nonCommentRest then Leading else Trailing
-          indent = detectCommonIndent baseIndent firstLine restLines
+    [] -> 
+      let depStr = formatDependency dep
+      in fl { fieldValue = " " <> depStr }
+    ((firstLine, _):restLines) ->
+      let nonCommentRest = filter (not . T.isPrefixOf "--" . T.stripStart . fst) restLines
+          style = if any (T.isPrefixOf "," . T.stripStart . fst) nonCommentRest then Leading else Trailing
+          indent = detectCommonIndent baseIndent firstLine (map fst restLines)
           isLeading = case style of { Leading -> True; Trailing -> False }
-          -- actualIndent is the column where the package name OR leading comma starts.
-          -- If isLeading, we want comma at (indent - 2) if it was aligned to package previously, 
-          -- or at indent if it was already aligned to comma.
           actualIndent = if indent <= baseIndent 
                          then baseIndent + 4 
                          else indent
@@ -418,48 +444,70 @@ addNewDep dep fl =
                  then ensureTrailingComma val 
                  else val
           
-          -- Manually format the new dependency line
           depStr = if isLeading 
-                   then T.replicate (actualIndent - 2) " " <> ", " <> formatDependency dep
+                   then T.replicate actualIndent " " <> ", " <> formatDependency dep
                    else T.replicate actualIndent " " <> formatDependency dep
 
-          newVal = if T.isSuffixOf "\n" val'
-                   then val' <> depStr <> "\n"
-                   else val' <> "\n" <> depStr
+          -- Find the last non-empty, non-comment line to append after
+          ls' = splitPreservingLineEndings val'
+          isRelevant (l, _) = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
+          lastIdx = case findIndex isRelevant (reverse ls') of
+                      Just i -> length ls' - 1 - i
+                      Nothing -> length ls' - 1
+          
+          (pre, post) = splitAt (lastIdx + 1) ls'
+          
+          -- To append on a new line, we must ensure the line we append after has a terminator.
+          -- We also want to preserve the last terminator of the field value (e.g. if it was empty).
+          lastTerm = case reverse pre of
+                       ((_, t):_) -> t
+                       [] -> term
+              
+          actualLastTerm = if T.null lastTerm then term else lastTerm
+          newTerm = if T.null lastTerm then "" else actualLastTerm
+              
+          -- Update the terminator of the last line in 'pre'
+          updateLastTerm [] = []
+          updateLastTerm [(l, _)] = [(l, actualLastTerm)]
+          updateLastTerm (x:xs) = x : updateLastTerm xs
+              
+          preUpdated = updateLastTerm pre
+              
+          newVal = T.concat (map (uncurry (<>)) preUpdated) <> depStr <> newTerm <> T.concat (map (uncurry (<>)) post)
       in fl { fieldValue = newVal }
 
 ensureTrailingComma :: Text -> Text
 ensureTrailingComma t = 
-  let ls = T.splitOn "\n" t
-      -- Find last non-empty, non-comment line
-      isRelevant l = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
+  let ls = splitPreservingLineEndings t
+      isRelevant (l, _) = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
       idx = case findIndex isRelevant (reverse ls) of
               Just i -> length ls - 1 - i
               Nothing -> -1
   in if idx == -1 
      then t
      else 
-       let target = ls !! idx
+       let (target, tTerm) = ls !! idx
        in if "," `T.isSuffixOf` T.stripEnd target
           then t
           else 
             let (pre, post) = splitAt idx ls
                 newTarget = T.dropWhileEnd isSpace target <> ","
-            in T.intercalate "\n" (pre ++ [newTarget] ++ drop 1 post)
+                reconstructedTarget = newTarget <> tTerm
+            in T.concat (map (uncurry (<>)) pre) <> reconstructedTarget <> T.concat (map (uncurry (<>)) (drop 1 post))
 
 updateExistingDep :: Dependency -> FieldLine -> FieldLine
 updateExistingDep dep fl = 
   let val = fieldValue fl
       pkgName = unPackageName (depName dep)
-      ls = T.splitOn "\n" val
-      newLs = map (updateSpecificLine pkgName dep) ls
-  in fl { fieldValue = T.intercalate "\n" newLs }
+      ls = splitPreservingLineEndings val
+      newLs = map (\(l, t) -> (updateSpecificLine pkgName dep l, t)) ls
+  in fl { fieldValue = T.concat (map (uncurry (<>)) newLs) }
 
 updateSpecificLine :: Text -> Dependency -> Text -> Text
 updateSpecificLine pkgName dep line = 
   let (indent, rest) = T.span (== ' ') line
       parts = T.splitOn "," rest
-      updatePart p = if isPkgInLine pkgName p
+      updatePart p = if isPkgInPart pkgName p
                      then let (prefix, _) = T.span (== ' ') p
                           in prefix <> formatDependency dep
                      else p
@@ -469,47 +517,51 @@ updateSpecificLine pkgName dep line =
 removeDepFromField :: Text -> FieldLine -> FieldLine
 removeDepFromField pkgName fl = 
   let val = fieldValue fl
-      hasTrailingNewline = T.isSuffixOf "\n" val
-      ls = T.splitOn "\n" val
-      -- Process each line to remove the package if it exists
-      processedLines = map (removePkgFromLine pkgName) ls
-      -- Filter out Nothing (lines that became empty due to removal)
-      -- Keep Just "" (lines that were originally empty or just comments/separators we want to keep? No, removePkgFromLine handles that)
-      filteredLines = mapMaybe id processedLines
+      ls = splitPreservingLineEndings val
+      processedLines = map (\(l, t) -> (removePkgFromLine pkgName l, t)) ls
+      filteredLines = mapMaybe (\(ml, t) -> fmap (,t) ml) processedLines
       
-      -- Fix commas
-      finalLs = fixCommas filteredLines
-      result = T.intercalate "\n" finalLs
+      (finalContentLines, finalTerminators) = unzip filteredLines
+      fixedContentLines = fixCommas finalContentLines
       
-      resultWithNewline = if hasTrailingNewline && not (T.null result) then result <> "\n" else result
+      lastOrigTerm = case reverse ls of
+                       ((_, t):_) -> t
+                       [] -> ""
+      
+      adjustedTerminators = if null finalTerminators 
+                            then []
+                            else init finalTerminators ++ [lastOrigTerm]
 
-      -- Preserve leading space if it is a single line (or became one) and needs separation
-      -- If result has no newlines, it is a single line.
-      isSingleLine = not (T.isInfixOf "\n" (T.strip resultWithNewline))
+      result = T.concat (zipWith (<>) fixedContentLines adjustedTerminators)
+      isSingleLine = not (T.any (\c -> c == '\n' || c == '\r') (T.stripEnd result))
       
-      finalResult = if isSingleLine && not (T.null (T.strip resultWithNewline)) && not (" " `T.isPrefixOf` resultWithNewline) && not ("\n" `T.isPrefixOf` resultWithNewline)
-                    then " " <> resultWithNewline
-                    else if T.null (T.strip resultWithNewline) then "" else resultWithNewline
+      finalResult = if isSingleLine && not (T.null (T.strip result)) && not (" " `T.isPrefixOf` result) && not ("\n" `T.isPrefixOf` result) && not ("\r" `T.isPrefixOf` result)
+                    then " " <> result
+                    else if T.null (T.strip result) then "" else result
   in fl { fieldValue = finalResult }
 
 removePkgFromLine :: Text -> Text -> Maybe Text
 removePkgFromLine pkg line =
   let (indent, rest) = T.span (== ' ') line
       parts = T.splitOn "," rest
-      -- Check if pkg is in this line
-      containsPkg = any (isPkgInLine pkg) parts
-  in if not containsPkg
-     then Just line -- Keep line as is (including empty lines)
+      -- Identify parts that contain the package
+      isPkg p = isPkgInPart pkg p
+      containsAny = any isPkg parts
+  in if not containsAny
+     then Just line
      else 
-       let remainingParts = filter (not . isPkgInLine pkg) parts
-           isLeading = "," `T.isPrefixOf` T.stripStart rest
-           newContent = T.intercalate ", " (map T.strip remainingParts)
-       in if T.null (T.strip newContent)
-          then Nothing -- Remove line entirely
+       let remainingParts = filter (not . isPkg) parts
+           -- Filter out truly empty parts (whitespace only)
+           nonEmptyRemaining = filter (not . T.null . T.strip) remainingParts
+       in if null nonEmptyRemaining
+          then Nothing -- Entire content of line removed
           else 
-            if isLeading && not ("," `T.isPrefixOf` T.stripStart newContent)
-            then Just $ indent <> ", " <> T.stripStart newContent
-            else Just $ indent <> newContent
+            -- Reconstruct line. If it was leading comma style, it might still have one.
+            -- Actually, T.intercalate "," remainingParts is better to preserve spaces.
+            let newRest = T.intercalate "," remainingParts
+            in if T.all isSpace newRest
+               then Nothing
+               else Just $ indent <> newRest
 
 fixCommas :: [Text] -> [Text]
 fixCommas [] = []
@@ -555,9 +607,6 @@ detectCommonIndent baseIndent firstLine restLines =
          then T.length indentPart
          else T.length indentPart
     Nothing -> 
-      -- If only one line exists, indent relative to 'build-depends:'
-      -- firstLine is just the VALUE of the field, e.g. " base"
       let spacesBeforeValue = T.length $ T.takeWhile (== ' ') firstLine
-          -- build-depends is 13 chars, plus 1 for colon
           valIndent = baseIndent + 13 + 1 + spacesBeforeValue
       in valIndent

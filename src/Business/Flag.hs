@@ -4,7 +4,6 @@
 module Business.Flag (handleFlag) where
 
 import Core.Types
-import Core.Parser
 import Core.AST.Types (CabalAST)
 import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
@@ -13,7 +12,7 @@ import Core.Safety
 import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
--- import qualified Data.Text.IO as TIO
+import qualified Data.Text.IO as TIO
 import Data.List (find)
 
 import Utils.Terminal (toggleDashboard)
@@ -22,15 +21,11 @@ import Control.Monad (foldM)
 
 handleFlag :: FlagOptions -> FilePath -> IO (Result ())
 handleFlag opts path = do
-  parseResult <- parseCabalFile path
-  case parseResult of
-    Failure err -> return $ Failure err
-    Success cabalFile -> do
-      let content = cfRawContent cabalFile
-      let ast = parseAST content
-      if foInteractive opts
-        then runFlagDashboard ast path opts
-        else handleSingleFlag ast path opts
+  content <- TIO.readFile path
+  let ast = parseAST content
+  if foInteractive opts
+    then runFlagDashboard ast path opts
+    else handleSingleFlag ast path opts
 
 runFlagDashboard :: CabalAST -> FilePath -> FlagOptions -> IO (Result ())
 runFlagDashboard ast path opts = do

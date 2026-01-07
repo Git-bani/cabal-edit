@@ -12,83 +12,74 @@ import qualified Data.Text as T
 import qualified Distribution.Pretty as CabalPretty
 
 serializeAST :: CabalAST -> Text
-serializeAST (CabalAST items) = T.intercalate "\n" (map serializeItem items)
+serializeAST (CabalAST items) = T.intercalate "" (map serializeItem items)
 
 serializeItem :: CabalItem -> Text
-serializeItem (EmptyLineItem t) = t
-serializeItem (CommentItem t) = t
+serializeItem (EmptyLineItem content term) = content <> term
+serializeItem (CommentItem content term) = content <> term
 serializeItem (FieldItem fl) = serializeField fl
 serializeItem (SectionItem sl children) = 
-  serializeSection sl <> "\n" <> T.intercalate "\n" (map serializeItem children)
+  serializeSection sl <> T.intercalate "" (map serializeItem children)
 serializeItem (IfBlock il thenItems elsePart) = 
-  serializeIf il <> "\n" <> 
-  T.intercalate "\n" (map serializeItem thenItems) <> 
+  serializeIf il <> 
+  T.intercalate "" (map serializeItem thenItems) <> 
   maybe "" serializeElse elsePart
 
 serializeField :: FieldLine -> Text
 serializeField fl = 
   let indent = T.replicate (fieldIndent fl) " "
-  in indent <> fieldName fl <> ":" <> formatFieldValue (fieldIndent fl) (fieldValue fl)
-
-formatFieldValue :: Int -> Text -> Text
-formatFieldValue _ val = val
-
-ensureIndent :: Int -> Text -> Text
-ensureIndent target t
-  | T.null (T.strip t) = t
-  | T.length (T.takeWhile (== ' ') t) >= target = t
-  | otherwise = T.replicate target " " <> T.stripStart t
+  in indent <> fieldName fl <> ":" <> fieldValue fl <> fieldLineEnding fl
 
 serializeSection :: SectionLine -> Text
 serializeSection sl = 
   let indent = T.replicate (sectionIndent sl) " "
       args = if T.null (sectionArgs sl) then "" else " " <> sectionArgs sl
-  in indent <> sectionType sl <> args
+  in indent <> sectionType sl <> args <> sectionLineEnding sl
 
 serializeIf :: IfLine -> Text
 serializeIf il = 
   let indent = T.replicate (ifIndent il) " "
-  in indent <> "if " <> ifCondition il
+  in indent <> "if " <> ifCondition il <> ifLineEnding il
 
 serializeElse :: (ElseLine, [CabalItem]) -> Text
 serializeElse (el, items) = 
   let indent = T.replicate (elseIndent el) " "
-  in "\n" <> indent <> "else\n" <> T.intercalate "\n" (map serializeItem items)
+  in indent <> "else" <> elseLineEnding el <> T.intercalate "" (map serializeItem items)
 
 --------------------------------------------------------------------------------
 -- Dependency Formatting
 --------------------------------------------------------------------------------
 
 formatDependency :: Dependency -> Text
-formatDependency dep = 
+formatDependency dep =
   unPackageName (depName dep) <> formatVersionConstraint (depVersionConstraint dep)
 
 formatVersionConstraint :: Maybe VersionConstraint -> Text
 formatVersionConstraint Nothing = ""
 formatVersionConstraint (Just AnyVersion) = ""
-formatVersionConstraint (Just (ExactVersion ver)) = 
+formatVersionConstraint (Just (ExactVersion ver)) =
   " ==" <> formatVersion ver
-formatVersionConstraint (Just (MajorBoundVersion ver)) = 
+formatVersionConstraint (Just (MajorBoundVersion ver)) =
   " ^>=" <> formatVersion ver
 formatVersionConstraint (Just WorkspaceVersion) = ""
-formatVersionConstraint (Just (RangeVersion range)) = 
+formatVersionConstraint (Just (RangeVersion range)) =
   " " <> formatVersionRange range
-formatVersionConstraint (Just (UnparsedVersion v)) = 
+formatVersionConstraint (Just (UnparsedVersion v)) =
   if T.null v then "" else " " <> v
-formatVersionConstraint (Just (CabalVersionRange vr)) = 
+formatVersionConstraint (Just (CabalVersionRange vr)) =
   " " <> T.pack (CabalPretty.prettyShow vr)
 
 formatVersion :: Version -> Text
-formatVersion (Version parts) = 
+formatVersion (Version parts) =
   T.intercalate "." (map (T.pack . show) parts)
 
 formatVersionRange :: VersionRange -> Text
-formatVersionRange range = 
+formatVersionRange range =
   let lower = case lowerBound range of
         Nothing -> ""
         Just (ver, Inclusive) -> ">=" <> formatVersion ver
         Just (ver, Exclusive) -> ">" <> formatVersion ver
-      upper = case upperBound range of 
+      upper = case upperBound range of
         Nothing -> ""
         Just (ver, Inclusive) -> "<=" <> formatVersion ver
         Just (ver, Exclusive) -> "<" <> formatVersion ver

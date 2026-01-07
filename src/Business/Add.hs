@@ -3,7 +3,6 @@
 module Business.Add (addDependency) where
 
 import Core.Types
-import Core.Parser
 import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
 import Core.AST.Editor (addDependencyToAST)
@@ -16,7 +15,7 @@ import Utils.Terminal (selectItems)
 import External.Hackage (searchPackages)
 import Data.Text (Text)
 import qualified Data.Text as T
--- import qualified Data.Text.IO as TIO
+import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 import Data.Maybe (maybeToList)
 
@@ -37,26 +36,22 @@ addDependency maybeCtx opts path = do
       case sourceDepResult of
         Failure err -> return $ Failure err
         Success () -> do
-          -- 1. Parse cabal file
-          parseResult <- parseCabalFile path
-          case parseResult of
+          -- 1. Read file
+          content <- TIO.readFile path
+          
+          -- 2. Process each package
+          finalContentResult <- foldM (processPackage maybeCtx opts) (Success content) targetPkgNames
+          
+          case finalContentResult of
             Failure err -> return $ Failure err
-            Success cabalFile -> do
-              -- 2. Process each package
-              let initialContent = cfRawContent cabalFile
-              
-              finalContentResult <- foldM (processPackage maybeCtx opts) (Success initialContent) targetPkgNames
-              
-              case finalContentResult of
-                Failure err -> return $ Failure err
-                Success finalContent -> 
-                  if aoDryRun opts
-                    then do
-                      logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                      let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
-                      colorizeDiff diffs
-                      return $ Success ()
-                    else safeWriteFile path finalContent
+            Success finalContent -> 
+              if aoDryRun opts
+                then do
+                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                  let diffs = diffLines (T.lines content) (T.lines finalContent)
+                  colorizeDiff diffs
+                  return $ Success ()
+                else safeWriteFile path finalContent
 
 handleInteractiveSearch :: [Text] -> IO (Result [Text])
 handleInteractiveSearch [] = do

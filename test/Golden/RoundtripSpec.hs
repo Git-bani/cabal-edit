@@ -15,13 +15,14 @@ import Test.Hspec.Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import qualified Data.Text as T
-import Core.Parser (parseCabalFile, findDependencies)
+import Core.AST.Parser (parseAST)
+import Core.AST.Editor (findDependenciesInAST)
 import Data.List (sort)
 
 spec :: Spec
 spec = describe "Golden Roundtrip" $ do
   
-  let fixtures = ["complex.cabal", "common-stanzas.cabal"]
+  let fixtures = ["complex.cabal", "common-stanzas.cabal", "lens.cabal", "aeson.cabal", "pandoc.cabal"]
   
   forM_ fixtures $ \fixture -> do
     it ("preserves " ++ fixture ++ " exactly after Add + Remove cycle") $ do
@@ -30,7 +31,7 @@ spec = describe "Golden Roundtrip" $ do
         
         -- 1. Add a unique dependency
         let addOpts = AddOptions 
-              { aoPackageNames = ["containers"]
+              { aoPackageNames = ["cabal-edit-unique-dep"]
               , aoVersion = Just ">=0.1"
               , aoSection = TargetLib
               , aoCondition = Nothing, aoFlag = Nothing
@@ -46,7 +47,7 @@ spec = describe "Golden Roundtrip" $ do
         
         -- 2. Remove the same dependency
         let rmOpts = RemoveOptions
-              { roPackageNames = ["containers"]
+              { roPackageNames = ["cabal-edit-unique-dep"]
               , roSection = TargetLib
               , roDryRun = False, roInteractive = False
               }
@@ -96,10 +97,9 @@ spec = describe "Golden Roundtrip" $ do
         TIO.writeFile path baseContent
         
         -- Get original deps
-        res0 <- parseCabalFile path
-        deps0 <- case res0 of
-           Success cf0 -> return $ sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf0)
-           Failure err -> fail $ "Parse failed for initial content: " ++ show err
+        content0 <- TIO.readFile path
+        let ast0 = parseAST content0
+        let deps0 = sort $ map (\(_,_,d) -> unPackageName $ depName d) $ findDependenciesInAST ast0
 
         let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoInteractive = False }
         _ <- addDependency Nothing addOpts path
@@ -108,10 +108,9 @@ spec = describe "Golden Roundtrip" $ do
         _ <- removeDependency rmOpts path
         
         -- Get final deps
-        res1 <- parseCabalFile path
-        deps1 <- case res1 of
-           Success cf1 -> return $ sort $ map (unPackageName . depName) $ concatMap findDependencies (cfSections cf1)
-           Failure err -> fail $ "Parse failed after modifications: " ++ show err
+        content1 <- TIO.readFile path
+        let ast1 = parseAST content1
+        let deps1 = sort $ map (\(_,_,d) -> unPackageName $ depName d) $ findDependenciesInAST ast1
 
         ignoringIOErrors $ removeFile path
         ignoringIOErrors $ removeFile (path ++ ".bak")

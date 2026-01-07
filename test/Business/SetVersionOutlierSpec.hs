@@ -69,7 +69,7 @@ spec = describe "Business.SetVersion (Outliers)" $ do
       let opts = SetVersionOptions { svoVersion = "0.2", svoDryRun = False }
       result <- setVersion opts path
       case result of
-        Failure (Error msg ParseError) -> T.unpack msg `shouldContain` "missing"
+        Failure (Error msg ParseError) -> T.unpack msg `shouldContain` "Field not found"
         _ -> expectationFailure $ "Expected failure, got " ++ show result
 
 isSuccess :: Result a -> Bool

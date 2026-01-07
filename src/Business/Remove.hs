@@ -3,15 +3,14 @@
 module Business.Remove (removeDependency) where
 
 import Core.Types
-import Core.Parser
 import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
-import Core.AST.Editor (removeDependencyFromAST, findDependencyInAST)
+import Core.AST.Editor (removeDependencyFromAST, findDependencyInAST, findDependenciesInAST)
 import Core.Safety
 import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
--- import qualified Data.Text.IO as TIO
+import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
 import Data.Maybe (maybeToList)
 
@@ -21,39 +20,36 @@ import Data.List (nub)
 
 removeDependency :: RemoveOptions -> FilePath -> IO (Result ())
 removeDependency opts path = do
-  -- 1. Parse cabal file
-  parseResult <- parseCabalFile path
-  case parseResult of
-    Failure err -> return $ Failure err
-    Success cabalFile -> do
-      -- 2. Handle interactive mode
-      packageNames <- if roInteractive opts
-        then do
-          let allDeps = concatMap findDependencies (cfSections cabalFile)
-          let uniqueNames = nub $ map (unPackageName . depName) allDeps
-          if null uniqueNames
-            then return []
-            else selectItems "Select dependencies to remove:" uniqueNames
-        else return (roPackageNames opts)
+  -- 1. Read and parse into AST
+  content <- TIO.readFile path
+  let ast = parseAST content
+  
+  -- 2. Handle interactive mode
+  packageNames <- if roInteractive opts
+    then do
+      let allDeps = findDependenciesInAST ast
+      let uniqueNames = nub $ map (\(_, _, d) -> unPackageName (depName d)) allDeps
+      if null uniqueNames
+        then return []
+        else selectItems "Select dependencies to remove:" uniqueNames
+    else return (roPackageNames opts)
 
-      if null packageNames && not (null (roPackageNames opts) && not (roInteractive opts))
-        then return $ Success () -- Nothing to do
-        else do
+  if null packageNames && not (null (roPackageNames opts) && not (roInteractive opts))
+    then return $ Success () -- Nothing to do
+    else do
       -- 3. Process each package
-          let initialContent = cfRawContent cabalFile
-          
-          finalContentResult <- foldM (processPackageRemove opts) (Success initialContent) packageNames
-          
-          case finalContentResult of
-            Failure err -> return $ Failure err
-            Success finalContent -> 
-              if roDryRun opts
-                then do
-                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                  let diffs = diffLines (T.lines initialContent) (T.lines finalContent)
-                  colorizeDiff diffs
-                  return $ Success ()
-                else safeWriteFile path finalContent
+      finalContentResult <- foldM (processPackageRemove opts) (Success content) packageNames
+      
+      case finalContentResult of
+        Failure err -> return $ Failure err
+        Success finalContent -> 
+          if roDryRun opts
+            then do
+              logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+              let diffs = diffLines (T.lines content) (T.lines finalContent)
+              colorizeDiff diffs
+              return $ Success ()
+            else safeWriteFile path finalContent
 
 processPackageRemove :: RemoveOptions -> Result Text -> Text -> IO (Result Text)
 processPackageRemove _ (Failure err) _ = return $ Failure err

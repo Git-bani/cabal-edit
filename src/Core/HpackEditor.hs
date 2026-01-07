@@ -6,7 +6,7 @@ module Core.HpackEditor
   ) where
 
 import Core.Types
-import Core.Serializer (DependencyOperation(..))
+import Core.Types
 import Data.Text (Text)
 import qualified Data.Text as T
 
