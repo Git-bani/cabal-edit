@@ -172,6 +172,7 @@ Powered by a highly optimized AST engine, `cabal-edit` performs complex operatio
 
 ### Safety Guarantees
 - **Total Functions**: The core logic is implemented using 100% total functions, eliminating runtime crashes due to partiality (no `head`, `tail`, `undefined`).
+- **Exception-Free**: All IO operations and file handling are wrapped in the `Result` ADT. The library does not throw runtime exceptions, ensuring stability for callers.
 - **Type Safety**: Strong internal types and smart constructors (`PackageName`, `VersionConstraint`) prevent invalid states from ever being represented.
 - **Verification**: Every build passes **100+ property-based tests** (via `Hedgehog` & `QuickCheck`) ensuring semantic identity across Add/Remove cycles.
 

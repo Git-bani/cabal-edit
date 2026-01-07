@@ -81,6 +81,16 @@ data Dependency = Dependency
   }
 ```
 
+### `Result` (Error Handling)
+
+`cabal-edit` employs an **exception-free architecture**. All functions that can fail return a `Result` type. Callers are guaranteed that the library will not throw runtime exceptions (like `IOException` or custom `Error` exceptions) during normal operation.
+
+```haskell
+data Result a
+  = Success a
+  | Failure Error
+```
+
 ### `PackageName`
 
 Strongly typed package name with validation. Created via `mkPackageName` (for user input) or `trustedMkPackageName` (for verified internal sources).
@@ -88,9 +98,8 @@ Strongly typed package name with validation. Created via `mkPackageName` (for us
 ```haskell
 newtype PackageName = PackageName Text
 ```
-## Configuration
 
-Configuration is stored in `~/.cabal-edit/config.json`.
+## Configuration
 
 ```json
 {

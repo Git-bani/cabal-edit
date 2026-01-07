@@ -35,6 +35,14 @@ We welcome contributions to `cabal-edit`! Please follow these guidelines to ensu
 - Use camelCase for function names and UpperCamelCase for types.
 - Add comments for complex logic.
 
+## Strict Build Standards
+
+`cabal-edit` maintains an industrial-grade codebase. All contributions MUST:
+- Be 100% warning-free under `-Wall`.
+- Pass with `-Werror` enabled.
+- Avoid all partial functions (`head`, `last`, `init`, `!!`) in non-test code.
+- Ensure all logic is total and exception-safe.
+
 ## Project Structure
 
 - `src/`: Source code
