@@ -170,6 +170,17 @@ Powered by a highly optimized AST engine, `cabal-edit` performs complex operatio
 - **Processing Time**: < 70ms for a full parse-edit-write cycle on a 5,000-dependency file.
 - **Complexity**: Linear $O(N)$ scaling.
 
+## Research & Evaluation Benchmarks
+
+Beyond core performance, `cabal-edit` supports specialized benchmarks for evaluating deep research and LLM-based dependency management tasks.
+
+| Benchmark | Focus | Target Metrics |
+|-----------|-------|----------------|
+| **SimpleQA** | Fact-based dependency queries | Accuracy, Hallucination rate |
+| **BrowseComp** | Multi-package workspace analysis | Synthesis quality, Speed |
+
+These benchmarks utilize Gemini Flash via OpenRouter to evaluate the tool's effectiveness in automated environments.
+
 ### Safety Guarantees
 - **Total Functions**: The core logic is implemented using 100% total functions, eliminating runtime crashes due to partiality (no `head`, `tail`, `undefined`).
 - **Exception-Free**: All IO operations and file handling are wrapped in the `Result` ADT. The library does not throw runtime exceptions, ensuring stability for callers.

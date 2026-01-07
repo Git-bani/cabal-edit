@@ -108,3 +108,17 @@ newtype PackageName = PackageName Text
   "leading_comma": true
 }
 ```
+
+## Benchmarks & Evaluation
+
+The tool includes a suite of evaluation benchmarks designed for automated research environments.
+
+### SimpleQA
+Evaluates the tool's ability to answer factual questions about project dependencies. 
+- **Endpoint**: `/evaluate/simpleqa` (via research proxy)
+- **Model**: Gemini Flash 1.5
+
+### BrowseComp
+Evaluates the synthesis of complex multi-package workspace configurations.
+- **Endpoint**: `/evaluate/browsecomp`
+- **Model**: Gemini Flash 1.5 (OpenRouter)

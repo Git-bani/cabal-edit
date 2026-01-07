@@ -199,3 +199,25 @@ You can customize `cabal-edit` via `~/.cabal-edit/config.json`.
   "leading_comma": true
 }
 ```
+
+## Running Evaluation Benchmarks
+
+For researchers and developers working on automated agents, `cabal-edit` supports evaluation benchmarks.
+
+### Prerequisites
+- Python 3.10+
+- OpenRouter API Key
+
+### Execution
+Run the benchmarking suite via the research proxy:
+
+```bash
+# Set your OpenRouter key
+export OPENROUTER_API_KEY="your_key"
+
+# Run SimpleQA and BrowseComp
+python -m local_deep_research.benchmarks --task simpleqa
+python -m local_deep_research.benchmarks --task browsecomp
+```
+
+Results are stored in `./benchmarks/results/` for further analysis.
