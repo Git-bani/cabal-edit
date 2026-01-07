@@ -28,11 +28,13 @@ formatDependenciesAST _ ast =
      else T.intercalate "\n" $ concatMap formatGroup (groupBy ((==) `on` fst3) deps)
   where
     formatGroup secDeps =
-      let (secName, _, _) = head secDeps
-          header = "\n" <> secName <> ":"
-          sorted = sortOn (depName . thd3) secDeps
-          depLines = map formatEntry sorted
-      in header : depLines
+      case secDeps of
+        ((secName, _, _) : _) ->
+          let header = "\n" <> secName <> ":"
+              sorted = sortOn (depName . thd3) secDeps
+              depLines = map formatEntry sorted
+          in header : depLines
+        [] -> []
     
     formatEntry (_, mCond, d) =
       let condStr = case mCond of

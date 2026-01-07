@@ -528,9 +528,9 @@ removeDepFromField pkgName fl =
                        ((_, t):_) -> t
                        [] -> ""
       
-      adjustedTerminators = if null finalTerminators 
-                            then []
-                            else init finalTerminators ++ [lastOrigTerm]
+      adjustedTerminators = case finalTerminators of
+                            [] -> []
+                            ts -> init ts ++ [lastOrigTerm]
 
       result = T.concat (zipWith (<>) fixedContentLines adjustedTerminators)
       isSingleLine = not (T.any (\c -> c == '\n' || c == '\r') (T.stripEnd result))

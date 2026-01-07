@@ -106,14 +106,13 @@ parseField indent ((line, term):rest) =
       
       (hangingLines, remaining) = span (isHanging indent) rest
       
-      -- For fields, we preserve internal line endings in the 'fieldValue' 
-      -- but keep the primary terminator in 'fieldLineEnding'.
-      fullValue = if null hangingLines 
-                  then val 
-                  else val <> term <> T.intercalate "" (map (\(l, t) -> l <> t) (init' hangingLines)) <> (fst (last' hangingLines))
-      
-      -- If there were hanging lines, the field's logical terminator is the terminator of the LAST hanging line.
-      finalTerm = if null hangingLines then term else snd (last' hangingLines)
+      (fullValue, finalTerm) = case hangingLines of
+        [] -> (val, term)
+        _  -> 
+          let hLines = init hangingLines
+              (lastL, lastT) = last hangingLines
+              v = val <> term <> T.intercalate "" (map (\(l, t) -> l <> t) hLines) <> lastL
+          in (v, lastT)
                   
       fLine = FieldLine indent name fullValue finalTerm
   in (FieldItem fLine, remaining)
@@ -123,9 +122,6 @@ parseField indent ((line, term):rest) =
     isHanging parentIndent (l, _) = 
       let i = countIndent l
       in T.null (T.strip l) || i > parentIndent
-
-    last' xs = last xs
-    init' xs = init xs
 
 takeBlock :: [(Text, Text)] -> Int -> ([(Text, Text)], [(Text, Text)])
 takeBlock lines' parentIndent = 
