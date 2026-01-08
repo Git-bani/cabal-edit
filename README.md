@@ -37,8 +37,11 @@ cabal-edit add aeson --version "^>= 2.0"
 cabal-edit add -i json
 
 # Rename/Alias a dependency (Mixins)
-# Adds 'aeson' but exposes it as 'json' in your code
-cabal-edit add -r "json:aeson"
+# Adds 'aeson' but exposes it as 'JSON' via module renaming
+cabal-edit add aeson --mixin "(Data.Aeson as JSON)"
+
+# Hide modules from a dependency
+cabal-edit add base --mixin "hiding (Prelude)"
 
 # Add to a specific section (library, executable, test-suite, benchmark)
 cabal-edit add hspec --section test-suite --dev
@@ -202,7 +205,7 @@ These benchmarks utilize Gemini Flash via OpenRouter to evaluate the tool's effe
 - ✅ **Surgical Editing**: Guaranteed byte-for-byte fidelity for all unmodified parts. Preserves all comments, indentation, and structure.
 - ✅ **Smart Add**: Resolves latest versions from Hackage automatically (with offline fallback).
 - ✅ **Interactive Search**: Search Hackage and select packages to add from a TUI list.
-- ✅ **Renaming Support**: Add dependencies with aliases (Mixins) using `alias:package` syntax.
+- ✅ **Renaming Support**: Add dependencies with aliases (Mixins) using `--mixin` (e.g. `hiding (Prelude)`).
 - ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
 - ✅ **Flag Dashboard**: Visual TUI to toggle Cabal flags interactively.
 - ✅ **Interactive Removal**: Checklist-style selection for removing multiple packages.

@@ -37,11 +37,14 @@ This searches Hackage for "json" and presents a selectable list of matching pack
 
 **Renaming Dependencies (Mixins):**
 
-You can add a dependency under a different name (aliasing) using the `-r` or `--rename` flag with the syntax `alias:package`. This generates a `mixins` field in your Cabal file.
+You can use Cabal Mixins to rename modules or hide them to avoid conflicts. Use the `--mixin` flag to specify the mixin clause.
 
 ```bash
-# Adds 'aeson' but lets you import it as 'JSON'
-cabal-edit add -r "JSON:aeson"
+# Adds 'aeson' and renames 'Data.Aeson' to 'JSON'
+cabal-edit add aeson --mixin "(Data.Aeson as JSON)"
+
+# Adds 'base' but hides 'Prelude' to avoid conflicts with custom preludes
+cabal-edit add base --mixin "hiding (Prelude)"
 ```
 
 **Adding with constraints:**
