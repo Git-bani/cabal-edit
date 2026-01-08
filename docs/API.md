@@ -83,12 +83,15 @@ data Dependency = Dependency
 
 ### `Result` (Error Handling)
 
-`cabal-edit` employs an **exception-free architecture**. All functions that can fail return a `Result` type. Callers are guaranteed that the library will not throw runtime exceptions (like `IOException` or custom `Error` exceptions) during normal operation.
+`cabal-edit` employs an **exception-free architecture**. All functions that can fail return an `Either Error` type. Callers are guaranteed that the library will not throw runtime exceptions (like `IOException` or custom `Error` exceptions) during normal operation.
 
 ```haskell
-data Result a
-  = Success a
-  | Failure Error
+type Result a = Either Error a
+
+data Error = Error
+  { errorMessage :: Text
+  , errorCode :: ErrorCode
+  }
 ```
 
 ### `PackageName`
