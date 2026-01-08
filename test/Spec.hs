@@ -9,6 +9,7 @@ import qualified Business.SubLibrarySpec
 import qualified Business.ValidationSpec
 import qualified Business.SetVersionSpec
 import qualified Business.FlagSpec
+import qualified Business.MixinSpec
 import qualified Business.ListSpec
 import qualified Business.SourceDepSpec
 import qualified Business.CommonStanzaSpec
@@ -43,6 +44,7 @@ main = hspec $ do
   describe "Business.SetVersion" Business.SetVersionSpec.spec
   describe "Business.SetVersion (Outliers)" Business.SetVersionOutlierSpec.spec
   describe "Business.Flag" Business.FlagSpec.spec
+  describe "Business.Mixin" Business.MixinSpec.spec
   describe "Business.List" Business.ListSpec.spec
   describe "Business.SourceDep" Business.SourceDepSpec.spec
   describe "Business.CommonStanza" Business.CommonStanzaSpec.spec
