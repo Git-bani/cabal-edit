@@ -28,7 +28,7 @@ spec = describe "Business.SourceDep" $ do
           , aoInteractive = False
             , aoGit = Just "https://github.com/example/foo"
             , aoTag = Just "v1.0"
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       -- Ensure we are in the temp dir context effectively (or passed paths are absolute)
@@ -69,6 +69,7 @@ spec = describe "Business.SourceDep" $ do
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Just "../bar"
+            , aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts cabalPath

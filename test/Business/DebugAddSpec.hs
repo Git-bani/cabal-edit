@@ -25,7 +25,7 @@ spec = describe "Business.Add Debug" $ do
           , aoInteractive = False
           , aoGit = Nothing
           , aoTag = Nothing
-          , aoPath = Nothing
+          , aoPath = Nothing, aoMixin = Nothing
           , aoPackageNames = ["text"]
           }
     result <- addDependency Nothing opts path
@@ -55,7 +55,7 @@ spec = describe "Business.Add Debug" $ do
           , aoInteractive = False
           , aoGit = Nothing
           , aoTag = Nothing
-          , aoPath = Nothing
+          , aoPath = Nothing, aoMixin = Nothing
           , aoPackageNames = ["aeson"]
           }
     result <- addDependency Nothing opts path
@@ -85,7 +85,7 @@ spec = describe "Business.Add Debug" $ do
           , aoInteractive = False
           , aoGit = Nothing
           , aoTag = Nothing
-          , aoPath = Nothing
+          , aoPath = Nothing, aoMixin = Nothing
           , aoPackageNames = ["hspec"]
           }
     result <- addDependency Nothing opts path

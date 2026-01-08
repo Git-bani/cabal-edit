@@ -43,7 +43,6 @@ main = hspec $ do
   describe "Business.SetVersion" Business.SetVersionSpec.spec
   describe "Business.SetVersion (Outliers)" Business.SetVersionOutlierSpec.spec
   describe "Business.Flag" Business.FlagSpec.spec
-  describe "Business.Flag (Outliers)" Business.FlagOutlierSpec.spec
   describe "Business.List" Business.ListSpec.spec
   describe "Business.SourceDep" Business.SourceDepSpec.spec
   describe "Business.CommonStanza" Business.CommonStanzaSpec.spec

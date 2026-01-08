@@ -5,7 +5,7 @@ module Business.Add (addDependency) where
 import Core.Types
 import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
-import Core.AST.Editor (addDependencyToAST, getCabalVersion)
+import Core.AST.Editor (addDependencyToAST, getCabalVersion, addMixinToAST)
 import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
@@ -107,9 +107,48 @@ processPackage maybeCtx opts (Right currentContent) pkgNameText = do
           let targetName = case baseTarget of
                              TargetNamed n -> n
                              _ -> describeTarget baseTarget
-          case addDependencyToAST targetName condition dep ast of
+          
+          let depResult = addDependencyToAST targetName condition dep ast
+          
+          case depResult of
             Left err -> return $ Left err
-            Right updatedAST -> return $ Right $ serializeAST updatedAST
+            Right astWithDep -> 
+              -- Handle Mixin if present
+              case aoMixin opts of
+                Nothing -> return $ Right $ serializeAST astWithDep
+                Just mixinStr -> do
+                  let renaming = parseRenaming mixinStr
+                  let mixin = Mixin { mixinPackage = pkgName, mixinRenaming = renaming }
+                  case addMixinToAST targetName condition mixin astWithDep of
+                    Left err -> return $ Left err
+                    Right finalAST -> return $ Right $ serializeAST finalAST
+
+parseRenaming :: Text -> Renaming
+parseRenaming t =
+  let trimmed = T.strip t
+  in if "hiding" `T.isPrefixOf` T.toLower trimmed
+     then 
+       let content = T.drop 6 trimmed -- drop "hiding"
+           -- clean = T.dropWhile (not . isAlphaNum') content -- drop parens/spaces
+           -- This is a simplistic parser, could be improved
+           mods = map T.strip $ T.splitOn "," (T.filter (`notElem` ['(',')']) content)
+       in Hiding (filter (not . T.null) mods)
+     else 
+       let content = T.filter (`notElem` ['(',')']) trimmed
+           parts = map T.strip $ T.splitOn "," content
+           parseRename p = 
+             let ws = T.words p
+             in case ws of
+                  [old, "as", new] -> Just (old, new)
+                  _ -> Nothing
+           renames = mapMaybe parseRename parts
+       in if null renames then DefaultRenaming else Renaming renames
+
+mapMaybe :: (a -> Maybe b) -> [a] -> [b]
+mapMaybe _ [] = []
+mapMaybe f (x:xs) = case f x of
+                      Just y -> y : mapMaybe f xs
+                      Nothing -> mapMaybe f xs
 
 
 

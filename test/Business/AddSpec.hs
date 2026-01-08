@@ -28,7 +28,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -53,7 +53,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       _ <- addDependency Nothing opts path
@@ -74,7 +74,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -96,7 +96,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -114,7 +114,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -138,7 +138,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -160,7 +160,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -186,7 +186,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       _ <- addDependency Nothing opts path
       content <- TIO.readFile path
@@ -205,7 +205,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       _ <- addDependency Nothing opts path
       content <- TIO.readFile path
@@ -224,7 +224,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       _ <- addDependency Nothing opts path
       content <- TIO.readFile path
@@ -251,7 +251,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
-              , aoPath = Nothing
+              , aoPath = Nothing, aoMixin = Nothing
               }
         result <- addDependency Nothing opts path
         result `shouldSatisfy` isRight
@@ -276,7 +276,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
-              , aoPath = Nothing
+              , aoPath = Nothing, aoMixin = Nothing
               }
         result <- addDependency Nothing opts path
         result `shouldSatisfy` isRight
@@ -311,7 +311,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
-              , aoPath = Nothing
+              , aoPath = Nothing, aoMixin = Nothing
               }
         result <- addDependency Nothing opts path
         result `shouldSatisfy` isRight
@@ -333,7 +333,7 @@ spec = describe "Business.Add" $ do
           , aoInteractive = False
               , aoGit = Nothing
               , aoTag = Nothing
-              , aoPath = Nothing
+              , aoPath = Nothing, aoMixin = Nothing
               }
         result <- addDependency Nothing opts path
         result `shouldSatisfy` isRight

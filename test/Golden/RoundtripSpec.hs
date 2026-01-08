@@ -40,7 +40,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoDryRun = False
               , aoGit = Nothing
               , aoTag = Nothing
-              , aoPath = Nothing
+              , aoPath = Nothing, aoMixin = Nothing
               , aoInteractive = False
               }        
         resAdd <- addDependency Nothing addOpts path
@@ -71,7 +71,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoDryRun = False
               , aoGit = Nothing
               , aoTag = Nothing
-              , aoPath = Nothing
+              , aoPath = Nothing, aoMixin = Nothing
               , aoInteractive = False
               }
         -- First add
@@ -102,7 +102,7 @@ spec = describe "Golden Roundtrip" $ do
         let ast0 = parseAST content0
         let deps0 = sort $ map (\(_,_,d) -> unPackageName $ depName d) $ findDependenciesInAST ast0
 
-        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoInteractive = False }
+        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoMixin = Nothing, aoInteractive = False }
         _ <- addDependency Nothing addOpts path
         
         let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roInteractive = False }

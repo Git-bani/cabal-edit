@@ -266,6 +266,7 @@ data AddOptions = AddOptions
   , aoGit :: Maybe Text
   , aoTag :: Maybe Text
   , aoPath :: Maybe Text
+  , aoMixin :: Maybe Text
   , aoPackageNames :: [Text]
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)

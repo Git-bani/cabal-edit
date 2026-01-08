@@ -28,7 +28,7 @@ spec = describe "Sub-library Support" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path
@@ -52,7 +52,7 @@ spec = describe "Sub-library Support" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             }
       
       result <- addDependency Nothing opts path

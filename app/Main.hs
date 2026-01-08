@@ -171,6 +171,10 @@ addParser = AddCmd <$>
       ( long "path"
       <> metavar "PATH"
       <> help "Local path" ))
+  <*> optional (T.pack <$> strOption
+      ( long "mixin"
+      <> metavar "MIXIN"
+      <> help "Add mixin (e.g. 'hiding (Prelude)' or '(Data.Text as Text)')" ))
   <*> some (T.pack <$> argument str (metavar "PACKAGE"))
   )
 

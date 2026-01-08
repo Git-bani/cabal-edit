@@ -39,7 +39,7 @@ spec = describe "Core.Unicode" $ do
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
-            , aoPath = Nothing
+            , aoPath = Nothing, aoMixin = Nothing
             , aoPackageNames = ["text"]
             }
       result <- addDependency Nothing opts path
