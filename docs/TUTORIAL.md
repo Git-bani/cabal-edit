@@ -110,7 +110,15 @@ cabal-edit list
 
 This will output a formatted list of all packages and their version constraints.
 
-### 4. Upgrading Dependencies
+### 4. Version Management
+
+You can update the project version field at the top of your `.cabal` file:
+
+```bash
+cabal-edit set-version 1.2.3.4
+```
+
+### 5. Upgrading Dependencies
 
 To upgrade all dependencies to their latest versions on Hackage:
 

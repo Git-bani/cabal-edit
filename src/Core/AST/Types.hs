@@ -54,6 +54,7 @@ data SectionLine = SectionLine
   , sectionType :: Text       -- ^ e.g., "library", "test-suite"
   , sectionArgs :: Text       -- ^ e.g., "my-test"
   , sectionLineEnding :: Text
+  , sectionHasBraces :: Bool  -- ^ Whether this section uses { ... } syntax
   } deriving (Show, Eq, Generic, NFData)
 
 -- | Details about an 'if' line
@@ -61,10 +62,12 @@ data IfLine = IfLine
   { ifIndent :: Int
   , ifCondition :: Text       -- ^ e.g., "os(windows)"
   , ifLineEnding :: Text
+  , ifHasBraces :: Bool       -- ^ Whether the if-block uses { ... } syntax
   } deriving (Show, Eq, Generic, NFData)
 
 -- | Details about an 'else' line
 data ElseLine = ElseLine
   { elseIndent :: Int
   , elseLineEnding :: Text
+  , elseHasBraces :: Bool     -- ^ Whether the else-block uses { ... } syntax
   } deriving (Show, Eq, Generic, NFData)

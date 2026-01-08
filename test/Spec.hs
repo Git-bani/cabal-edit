@@ -24,6 +24,7 @@ import qualified Integration.HpackSpec
 import qualified Utils.ConfigSpec
 import qualified Utils.DiffSpec
 import qualified Core.AST.RoundtripSpec
+import qualified Core.AST.BracesSpec
 import qualified Core.AST.EditorSpec
 import qualified Core.AST.EditorOutlierSpec
 import qualified Business.DebugAddSpec
@@ -33,6 +34,7 @@ import qualified Business.SetVersionOutlierSpec
 main :: IO ()
 main = hspec $ do
   describe "Core.AST.Roundtrip" Core.AST.RoundtripSpec.spec
+  describe "Core.AST.Braces" Core.AST.BracesSpec.spec
   describe "Core.AST.Editor" Core.AST.EditorSpec.spec
   describe "Core.AST.Editor (Outliers)" Core.AST.EditorOutlierSpec.spec
   describe "Business.Add" Business.AddSpec.spec
@@ -44,6 +46,7 @@ main = hspec $ do
   describe "Business.SetVersion" Business.SetVersionSpec.spec
   describe "Business.SetVersion (Outliers)" Business.SetVersionOutlierSpec.spec
   describe "Business.Flag" Business.FlagSpec.spec
+  describe "Business.Flag (Outliers)" Business.FlagOutlierSpec.spec
   describe "Business.Mixin" Business.MixinSpec.spec
   describe "Business.List" Business.ListSpec.spec
   describe "Business.SourceDep" Business.SourceDepSpec.spec

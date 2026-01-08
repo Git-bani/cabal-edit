@@ -18,11 +18,15 @@ module Distribution.CabalEdit
     addDependency
   , removeDependency
   , upgradeDependencies
+  , setVersion
+  , handleFlag
 
     -- * Command Options
   , AddOptions(..)
   , RemoveOptions(..)
   , UpgradeOptions(..)
+  , SetVersionOptions(..)
+  , FlagOptions(..)
 
     -- * Results and Errors
   , Error(..)
@@ -35,11 +39,15 @@ module Distribution.CabalEdit
 import Business.Add (addDependency)
 import Business.Remove (removeDependency)
 import Business.Upgrade (upgradeDependencies)
+import Business.SetVersion (setVersion)
+import Business.Flag (handleFlag)
 import Core.Types
   ( SectionTarget(..)
   , AddOptions(..)
   , RemoveOptions(..)
   , UpgradeOptions(..)
+  , SetVersionOptions(..)
+  , FlagOptions(..)
   , Error(..)
   , ErrorCode(..)
   )

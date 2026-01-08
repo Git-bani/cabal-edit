@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Business.DebugAddSpec (spec) where
-import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add (addDependency)
 import Core.Types
-import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory (removeFile, doesFileExist)
 
@@ -39,7 +37,7 @@ spec = describe "Business.Add Debug" $ do
     
     exists <- doesFileExist path
     if exists then removeFile path else return ()
-    1 `shouldBe` 1
+    True `shouldBe` True
 
   it "debugs: adds to multi-line" $ do
     let path = "debug_add_multi.cabal"
@@ -69,7 +67,7 @@ spec = describe "Business.Add Debug" $ do
     
     exists <- doesFileExist path
     if exists then removeFile path else return ()
-    1 `shouldBe` 1
+    True `shouldBe` True
 
   it "debugs: adds to test-suite" $ do
     let path = "debug_add_test.cabal"
@@ -99,4 +97,4 @@ spec = describe "Business.Add Debug" $ do
     
     exists <- doesFileExist path
     if exists then removeFile path else return ()
-    1 `shouldBe` 1
+    True `shouldBe` True

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.ValidationSpec (spec) where
-import Data.Either (isRight, isLeft)
+import Data.Either (isLeft)
 
 import Test.Hspec
 import Test.Hspec.Hedgehog

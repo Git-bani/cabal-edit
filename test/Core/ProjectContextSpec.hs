@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Core.ProjectContextSpec (spec) where
-import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Core.ProjectContext
@@ -10,9 +9,6 @@ import System.Directory
   , createDirectoryIfMissing
   , removeDirectoryRecursive
   , setCurrentDirectory
-  , doesFileExist
-  , listDirectory
-  , doesDirectoryExist
   , getTemporaryDirectory
   )
 import System.FilePath

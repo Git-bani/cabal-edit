@@ -36,10 +36,10 @@ upgradeDependencies opts path = do
                                    valid = [p | (_, Right p) <- results]
                                in if null errors 
                                   then return $ Right valid
-                                  else return $ Left ("Invalid package names: " <> T.intercalate ", " errors)
+                                  else return $ Left (Error ("Invalid package names: " <> T.intercalate ", " errors) InvalidDependency)
 
   case targetPkgNamesResult of
-    Left err -> return $ Left $ Error err InvalidDependency
+    Left err -> return $ Left err
     Right userPkgNames -> do
       let depsToUpgrade = if null userPkgNames
                           then allDepsWithLoc

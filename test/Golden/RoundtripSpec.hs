@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Golden.RoundtripSpec (spec) where
-import Data.Either (isRight, isLeft)
+import Data.Either (isRight)
 
 import Test.Hspec
 import Business.Add

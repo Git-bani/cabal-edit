@@ -67,13 +67,15 @@ parseSectionBlock :: Int -> [(Text, Text)] -> (CabalItem, [(Text, Text)])
 parseSectionBlock _ [] = (EmptyLineItem "" "", [])
 parseSectionBlock indent ((line, term):rest) = 
   let trimmed = T.stripStart line
-      (type', args) = T.break isSpace trimmed
-      sLine = SectionLine indent type' (T.strip args) term
+      (type', argsRaw) = T.break isSpace trimmed
+      (cleanArgs, useBraces) = detectBrace (T.strip argsRaw)
+      sLine = SectionLine indent type' cleanArgs term useBraces
       
-      (blockLines, remaining) = takeBlock rest indent
+      (blockLines, remaining) = takeBlock rest indent useBraces
+      -- If using braces, ignore indentation for children
       children = if null blockLines 
-                 then [] 
-                 else parseBlock (indent + 1) blockLines
+                 then []
+                 else parseBlock (if useBraces then 0 else indent + 1) blockLines
                  
   in (SectionItem sLine children, remaining)
 
@@ -81,22 +83,32 @@ parseIfBlock :: Int -> [(Text, Text)] -> (CabalItem, [(Text, Text)])
 parseIfBlock _ [] = (EmptyLineItem "" "", [])
 parseIfBlock indent ((line, term):rest) = 
   let trimmed = T.stripStart line
-      cond = T.drop 3 trimmed -- drop "if "
-      ifLine = IfLine indent (T.strip cond) term
+      condRaw = T.strip (T.drop 3 trimmed) -- drop "if "
+      (cond, useBraces) = detectBrace condRaw
+      ifLine = IfLine indent cond term useBraces
       
-      (thenLines, afterThen) = takeBlock rest indent
-      thenItems = parseBlock (indent + 1) thenLines
+      (thenLines, afterThen) = takeBlock rest indent useBraces
+      thenItems = parseBlock (if useBraces then 0 else indent + 1) thenLines
       
       -- Check for else
       (elsePart, finalRemaining) = case afterThen of
         ((l, t):rs) | "else" `T.isPrefixOf` (T.stripStart l) ->
              let elseIndentVal = countIndent l
-                 (elseLines, afterElse) = takeBlock rs indent
-                 elseItems = parseBlock (indent + 1) elseLines
-             in (Just (ElseLine elseIndentVal t, elseItems), afterElse)
+                 elseRaw = T.strip (T.drop 4 (T.stripStart l))
+                 (_, elseBraces) = detectBrace elseRaw
+                 (elseLines, afterElse) = takeBlock rs indent elseBraces
+                 elseItems = parseBlock (if elseBraces then 0 else indent + 1) elseLines
+             in (Just (ElseLine elseIndentVal t elseBraces, elseItems), afterElse)
         _ -> (Nothing, afterThen)
         
   in (IfBlock ifLine thenItems elsePart, finalRemaining)
+
+detectBrace :: Text -> (Text, Bool)
+detectBrace t =
+  let t' = T.stripEnd t
+  in if "{" `T.isSuffixOf` t'
+     then (T.stripEnd (T.dropEnd 1 t'), True)
+     else (t, False)
 
 parseField :: Int -> [(Text, Text)] -> (CabalItem, [(Text, Text)])
 parseField _ [] = (EmptyLineItem "" "", [])
@@ -123,9 +135,24 @@ parseField indent ((line, term):rest) =
       let i = countIndent l
       in T.null (T.strip l) || i > parentIndent
 
-takeBlock :: [(Text, Text)] -> Int -> ([(Text, Text)], [(Text, Text)])
-takeBlock lines' parentIndent = 
+takeBlock :: [(Text, Text)] -> Int -> Bool -> ([(Text, Text)], [(Text, Text)])
+takeBlock lines' parentIndent False = 
   span (isChild parentIndent) lines'
+takeBlock lines' _ True =
+  let (block, rest) = break isClosingBrace lines'
+      remaining = case rest of
+        ((l, term):rs) -> 
+           let t = T.stripStart l
+           in if t == "}" 
+              then rs 
+              else (T.stripStart (T.drop 1 t), term) : rs -- Handle '} else'
+        [] -> []
+  in (block, remaining)
+
+isClosingBrace :: (Text, Text) -> Bool
+isClosingBrace (l, _) = 
+  let t = T.strip l
+  in t == "}" || "}" `T.isPrefixOf` t
 
 isChild :: Int -> (Text, Text) -> Bool
 isChild parentIndent (l, _) = 

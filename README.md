@@ -163,14 +163,14 @@ Powered by a highly optimized AST engine, `cabal-edit` performs complex operatio
 
 | Operation | Time | Description |
 |-----------|------|-------------|
-| **Parse** | ~13 µs | High-fidelity AST parsing (simple files) |
-| **Add** | ~11 µs | Inserting a dependency into the AST |
-| **Remove** | ~4.7 µs | Surgically removing a dependency |
+| **Parse** | ~11.5 µs | High-fidelity AST parsing (simple files) |
+| **Add** | ~9.9 µs | Inserting a dependency into the AST |
+| **Remove** | ~4.1 µs | Surgically removing a dependency |
 | **Update** | ~2.5 µs | Modifying a version constraint or field |
 
 ### Scalability
 `cabal-edit` has been stress-tested on massive Cabal files (5,000+ dependencies).
-- **Processing Time**: < 70ms for a full parse-edit-write cycle on a 5,000-dependency file.
+- **Processing Time**: ~27ms for a full parse-edit-write cycle on a 5,000-dependency file.
 - **Complexity**: Linear $O(N)$ scaling.
 
 ## Research & Evaluation Benchmarks
@@ -188,7 +188,7 @@ These benchmarks utilize Gemini Flash via OpenRouter to evaluate the tool's effe
 - **Total Functions**: The core logic is implemented using 100% total functions, eliminating runtime crashes due to partiality (no `head`, `tail`, `undefined`).
 - **Exception-Free**: All IO operations and file handling are wrapped in the `Result` ADT. The library does not throw runtime exceptions, ensuring stability for callers.
 - **Type Safety**: Strong internal types and smart constructors (`PackageName`, `VersionConstraint`) prevent invalid states from ever being represented.
-- **Verification**: Every build passes **100+ property-based tests** (via `Hedgehog` & `QuickCheck`) ensuring semantic identity across Add/Remove cycles.
+- **Verification**: Every build passes **115+ property-based tests** (via `Hedgehog` & `QuickCheck`) ensuring semantic identity across Add/Remove cycles.
 
 ## Supported GHC Versions
 

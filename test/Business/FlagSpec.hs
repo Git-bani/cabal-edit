@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.FlagSpec (spec) where
-import Data.Either (isRight, isLeft)
+import Data.Either (isRight)
 
 import Test.Hspec
 import Business.Flag

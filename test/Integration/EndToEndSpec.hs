@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Integration.EndToEndSpec (spec) where
-import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import System.Directory

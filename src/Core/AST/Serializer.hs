@@ -16,15 +16,27 @@ serializeAST :: CabalAST -> Text
 serializeAST (CabalAST items) = T.intercalate "" (map serializeItem items)
 
 serializeItem :: CabalItem -> Text
-serializeItem (EmptyLineItem content term) = content <> term
-serializeItem (CommentItem content term) = content <> term
-serializeItem (FieldItem fl) = serializeField fl
-serializeItem (SectionItem sl children) = 
-  serializeSection sl <> T.intercalate "" (map serializeItem children)
-serializeItem (IfBlock il thenItems elsePart) = 
-  serializeIf il <> 
-  T.intercalate "" (map serializeItem thenItems) <> 
-  maybe "" serializeElse elsePart
+serializeItem item = case item of
+  EmptyLineItem content term -> content <> term
+  CommentItem content term -> content <> term
+  FieldItem fl -> serializeField fl
+  SectionItem sl children -> 
+    let content = serializeSection sl <> T.intercalate "" (map serializeItem children)
+        closing = if sectionHasBraces sl 
+                  then T.replicate (sectionIndent sl) " " <> "}" <> sectionLineEnding sl
+                  else ""
+    in content <> closing
+  IfBlock il thenItems elsePart -> 
+    let content = serializeIf il <> T.intercalate "" (map serializeItem thenItems)
+        closing = if ifHasBraces il
+                  then case elsePart of
+                    Nothing -> T.replicate (ifIndent il) " " <> "}" <> ifLineEnding il
+                    Just (el, _) -> 
+                      if elseIndent el == 0
+                      then T.replicate (ifIndent il) " " <> "} "
+                      else T.replicate (ifIndent il) " " <> "}" <> ifLineEnding il
+                  else ""
+    in content <> closing <> maybe "" (serializeElse (ifIndent il)) elsePart
 
 serializeField :: FieldLine -> Text
 serializeField fl = 
@@ -35,17 +47,24 @@ serializeSection :: SectionLine -> Text
 serializeSection sl = 
   let indent = T.replicate (sectionIndent sl) " "
       args = if T.null (sectionArgs sl) then "" else " " <> sectionArgs sl
-  in indent <> sectionType sl <> args <> sectionLineEnding sl
+      braces = if sectionHasBraces sl then " {" else ""
+  in indent <> sectionType sl <> args <> braces <> sectionLineEnding sl
 
 serializeIf :: IfLine -> Text
 serializeIf il = 
   let indent = T.replicate (ifIndent il) " "
-  in indent <> "if " <> ifCondition il <> ifLineEnding il
+      braces = if ifHasBraces il then " {" else ""
+  in indent <> "if " <> ifCondition il <> braces <> ifLineEnding il
 
-serializeElse :: (ElseLine, [CabalItem]) -> Text
-serializeElse (el, items) = 
+serializeElse :: Int -> (ElseLine, [CabalItem]) -> Text
+serializeElse parentIfIndent (el, items) = 
   let indent = T.replicate (elseIndent el) " "
-  in indent <> "else" <> elseLineEnding el <> T.intercalate "" (map serializeItem items)
+      braces = if elseHasBraces el then " {" else ""
+      content = T.intercalate "" (map serializeItem items)
+      closing = if elseHasBraces el 
+                then T.replicate parentIfIndent " " <> "}" <> elseLineEnding el
+                else ""
+  in indent <> "else" <> braces <> elseLineEnding el <> content <> closing
 
 --------------------------------------------------------------------------------
 -- Dependency Formatting

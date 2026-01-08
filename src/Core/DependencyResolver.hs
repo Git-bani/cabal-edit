@@ -67,7 +67,7 @@ computePVPRange :: Version -> VersionRange
 computePVPRange v@(Version parts) =
   let lower = Just (v, Inclusive)
       upper = case parts of
-                (0:y:_) -> Just (Version [0, y + 1], Exclusive)
-                (x:_) -> Just (Version [x + 1, 0], Exclusive)
-                [] -> Nothing
+                (a:b:_) -> Just (Version [a, b + 1], Exclusive)
+                [a]     -> Just (Version [a, 1], Exclusive)
+                []      -> Nothing
   in VersionRange lower upper

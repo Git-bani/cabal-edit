@@ -118,7 +118,7 @@ findFlagStanzasInAST (CabalAST items) =
 addFlagToAST :: Text -> CabalAST -> Either Error CabalAST
 addFlagToAST name (CabalAST items) =
   let term = detectDefaultTerminator items
-      newStanza = SectionItem (SectionLine 0 "flag" name term)
+      newStanza = SectionItem (SectionLine 0 "flag" name term False)
         [ FieldItem (FieldLine 4 "description" (" " <> name) term)
         , FieldItem (FieldLine 4 "manual" " True" term)
         , FieldItem (FieldLine 4 "default" " False" term)
@@ -307,7 +307,7 @@ updateSection target mCond f (SectionItem sl children)
              then (Just (SectionItem sl updatedChildren), True)
              else -- Create new if block if not found
                let term = sectionLineEnding sl
-                   newIf = IfBlock (IfLine (sectionIndent sl + 4) cond term) (f []) Nothing
+                   newIf = IfBlock (IfLine (sectionIndent sl + 4) cond term False) (f []) Nothing
                in (Just (SectionItem sl (children ++ [newIf])), True)
   | otherwise = 
       let (updatedChildren, found) = runUpdateFilter (updateSection target mCond f) children

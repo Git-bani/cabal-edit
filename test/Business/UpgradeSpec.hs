@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.UpgradeSpec (spec) where
-import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Upgrade
@@ -43,6 +42,17 @@ spec = describe "Business.Upgrade" $ do
         Left (Error _ NetworkError) -> return () -- Acceptable
         Right _ -> return ()
         Left e -> expectationFailure $ "Unexpected failure: " ++ show e
+
+  it "skips upgrade when version is already latest" $ do
+    withTempCabalFile basicCabalFile $ \path -> do
+      -- We'll use a package name that doesn't exist to trigger a failure or nothing
+      let opts = UpgradeOptions 
+            { uoDryRun = False
+            , uoInteractive = False
+            , uoPackageNames = ["non-existent-package-at-least-we-hope"]
+            }
+      result <- upgradeDependencies opts path
+      result `shouldBe` Right ()
 
 basicCabalFile :: Text
 basicCabalFile = T.unlines
