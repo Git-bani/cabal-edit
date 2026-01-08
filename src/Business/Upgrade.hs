@@ -4,10 +4,10 @@ module Business.Upgrade
 
 import Core.Types
 import Core.AST.Parser (parseAST)
-import Core.AST.Serializer (serializeAST)
-import Core.AST.Editor (updateDependencyInAST, findDependenciesInAST)
+import Core.AST.Serializer (serializeAST, formatDependency)
+import Core.AST.Editor (updateDependencyInAST, findDependenciesInAST, getCabalVersion)
 import Core.Safety
-import Core.DependencyResolver (resolveLatestVersion)
+import Core.DependencyResolver (resolveVersionConstraint)
 import Utils.Logging (logInfo)
 import Utils.Terminal (selectItems)
 import Data.Text (Text)
@@ -23,6 +23,7 @@ upgradeDependencies opts path = do
   -- 1. Read file and parse AST
   content <- TIO.readFile path
   let ast = parseAST content
+  let cabalVer = getCabalVersion ast
   
   -- 2. Gathering all upgradeable dependencies
   let allDepsWithLoc = findDependenciesInAST ast
@@ -51,7 +52,7 @@ upgradeDependencies opts path = do
           let uniquePkgNames = nub $ map (depName . thd) depsToUpgrade
           
           -- 5. Resolve latest versions for these packages
-          upgradedDepsResult <- forM uniquePkgNames resolveLatestDependency
+          upgradedDepsResult <- forM uniquePkgNames (resolveLatestDependency cabalVer)
           let failures = [e | Left e <- upgradedDepsResult]
           case failures of
             (e:_) -> return $ Left e
@@ -95,20 +96,17 @@ upgradeDependencies opts path = do
 thd :: (a, b, c) -> c
 thd (_, _, c) = c
 
-resolveLatestDependency :: PackageName -> IO (Either Error Dependency)
-resolveLatestDependency name = do
-  res <- resolveLatestVersion name
+resolveLatestDependency :: Maybe Version -> PackageName -> IO (Either Error Dependency)
+resolveLatestDependency cabalVer name = do
+  -- Resolve using logic (PVP, Hackage)
+  res <- resolveVersionConstraint Nothing cabalVer name Nothing
   case res of
     Left err -> return $ Left err
-    Right ver -> return $ Right $ Dependency 
+    Right constraint -> return $ Right $ Dependency 
       { depName = name
-      , depVersionConstraint = Just (MajorBoundVersion ver)
+      , depVersionConstraint = Just constraint
       , depType = BuildDepends 
       }
 
 formatUpgrade :: Dependency -> Text
-formatUpgrade dep = 
-  let verStr = case depVersionConstraint dep of
-                 Just (MajorBoundVersion (Version parts)) -> "^>=" <> T.intercalate "." (map (T.pack . show) parts)
-                 _ -> ""
-  in unPackageName (depName dep) <> " " <> verStr
+formatUpgrade dep = formatDependency dep

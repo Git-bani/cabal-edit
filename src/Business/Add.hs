@@ -5,7 +5,7 @@ module Business.Add (addDependency) where
 import Core.Types
 import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
-import Core.AST.Editor (addDependencyToAST)
+import Core.AST.Editor (addDependencyToAST, getCabalVersion)
 import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
@@ -76,11 +76,15 @@ processPackage maybeCtx opts (Right currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
     Left err -> return $ Left $ Error err InvalidDependency
     Right pkgName -> do
+      -- Parse AST
+      let ast = parseAST currentContent
+      let cabalVer = getCabalVersion ast
+      
       -- Resolve version / Constraint
       let isSourceDep = isJust (aoGit opts) || isJust (aoPath opts)
       constraintResult <- if isSourceDep && isNothing (aoVersion opts)
                           then return $ Right AnyVersion
-                          else resolveVersionConstraint maybeCtx pkgName (aoVersion opts)
+                          else resolveVersionConstraint maybeCtx cabalVer pkgName (aoVersion opts)
       
       case constraintResult of
         Left err -> return $ Left err
@@ -100,7 +104,6 @@ processPackage maybeCtx opts (Right currentContent) pkgNameText = do
                                          Nothing -> Nothing
 
           -- Use AST Editor for all additions
-          let ast = parseAST currentContent
           let targetName = case baseTarget of
                              TargetNamed n -> n
                              _ -> describeTarget baseTarget

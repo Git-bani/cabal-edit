@@ -11,6 +11,7 @@ module Core.AST.Editor
   , addFlagToAST
   , updateFlagDefaultInAST
   , removeSectionFromAST
+  , getCabalVersion
   )
 where
 
@@ -23,6 +24,19 @@ import Data.List (find, findIndex)
 import Data.Char (isSpace)
 import Data.Maybe (mapMaybe, isNothing)
 import Text.Read (readMaybe)
+
+-- | Get the cabal-version declared in the AST
+getCabalVersion :: CabalAST -> Maybe Version
+getCabalVersion (CabalAST items) = 
+  case find (isFieldNamed "cabal-version") items of
+    Just (FieldItem fl) -> parseCabalVersion (fieldValue fl)
+    _ -> Nothing
+
+parseCabalVersion :: Text -> Maybe Version
+parseCabalVersion t = 
+  let t' = T.strip t
+      t'' = if ">=" `T.isPrefixOf` t' then T.strip (T.drop 2 t') else t'
+  in Just $ parseVersionText' t''
 
 isVersionOpStart :: Char -> Bool
 isVersionOpStart c = c `elem` ("> <=^" :: String)
