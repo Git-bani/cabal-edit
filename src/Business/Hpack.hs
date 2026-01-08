@@ -16,39 +16,39 @@ import Control.Monad (foldM)
 import Data.List (nub)
 import Data.Maybe (mapMaybe)
 
-addHpackDependency :: AddOptions -> FilePath -> IO (Result ())
+addHpackDependency :: AddOptions -> FilePath -> IO (Either Error ())
 addHpackDependency opts path = do
   content <- TIO.readFile path
   
-  finalContentResult <- foldM (processHpackPackage opts) (Success content) (aoPackageNames opts)
+  finalContentResult <- foldM (processHpackPackage opts) (Right content) (aoPackageNames opts)
   
   case finalContentResult of
-    Failure err -> return $ Failure err
-    Success finalContent -> 
+    Left err -> return $ Left err
+    Right finalContent -> 
       if aoDryRun opts
         then do
           logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
           let diffs = diffLines (T.lines content) (T.lines finalContent)
           colorizeDiff diffs
-          return $ Success ()
+          return $ Right ()
         else do
           -- Using safeWriteFile instead of safeWriteCabal as it doesn't need Cabal verification
           _ <- safeWriteFile path finalContent
-          return $ Success ()
+          return $ Right ()
 
-processHpackPackage :: AddOptions -> Result Text -> Text -> IO (Result Text)
-processHpackPackage _ (Failure err) _ = return $ Failure err
-processHpackPackage opts (Success currentContent) pkgNameText = do
+processHpackPackage :: AddOptions -> Either Error Text -> Text -> IO (Either Error Text)
+processHpackPackage _ (Left err) _ = return $ Left err
+processHpackPackage opts (Right currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
-    Left err -> return $ Failure $ Error err InvalidDependency
+    Left err -> return $ Left $ Error err InvalidDependency
     Right pkgName -> do
       -- Resolve version / Constraint
       -- For Hpack we don't need full ProjectContext for local resolution yet (simplified)
       constraintResult <- resolveVersionConstraint Nothing pkgName (aoVersion opts)
       
       case constraintResult of
-        Failure err -> return $ Failure err
-        Success constraint -> do
+        Left err -> return $ Left err
+        Right constraint -> do
           let dep = Dependency
                 { depName = pkgName
                 
@@ -58,9 +58,9 @@ processHpackPackage opts (Success currentContent) pkgNameText = do
           
           -- Hpack editing is currently global (adding to top-level dependencies)
           -- TODO: Support sections in Hpack
-          return $ Success $ updateHpackDependencies currentContent [dep] Add
+          return $ Right $ updateHpackDependencies currentContent [dep] Add
 
-removeHpackDependency :: RemoveOptions -> FilePath -> IO (Result ())
+removeHpackDependency :: RemoveOptions -> FilePath -> IO (Either Error ())
 removeHpackDependency opts path = do
   content <- TIO.readFile path
   
@@ -88,10 +88,10 @@ removeHpackDependency opts path = do
       logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
       let diffs = diffLines (T.lines content) (T.lines finalContent)
       colorizeDiff diffs
-      return $ Success ()
+      return $ Right ()
     else do
       _ <- safeWriteFile path finalContent
-      return $ Success ()
+      return $ Right ()
 
 extractHpackDeps :: [Text] -> [Text]
 extractHpackDeps ls = 

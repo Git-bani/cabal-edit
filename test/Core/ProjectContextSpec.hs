@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Core.ProjectContextSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Core.ProjectContext

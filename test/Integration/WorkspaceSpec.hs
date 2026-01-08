@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Integration.WorkspaceSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import System.Directory

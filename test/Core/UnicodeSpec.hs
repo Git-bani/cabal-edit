@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Core.UnicodeSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Core.Types
@@ -44,8 +45,8 @@ spec = describe "Core.Unicode" $ do
       result <- addDependency Nothing opts path
       
       case result of
-        Failure e -> expectationFailure $ "Add failed: " ++ show e
-        Success () -> do
+        Left e -> expectationFailure $ "Add failed: " ++ show e
+        Right () -> do
           newContent <- TIO.readFile path
           let contentStr = T.unpack newContent
           

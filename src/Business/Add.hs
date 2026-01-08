@@ -21,70 +21,70 @@ import Data.Maybe (maybeToList)
 
 import Utils.Diff (diffLines, colorizeDiff)
 
-addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Result ())
+addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Either Error ())
 addDependency maybeCtx opts path = do
   -- 0. Handle Interactive Search
   pkgNamesResult <- if aoInteractive opts
                     then handleInteractiveSearch (aoPackageNames opts)
-                    else return $ Success (aoPackageNames opts)
+                    else return $ Right (aoPackageNames opts)
 
   case pkgNamesResult of
-    Failure err -> return $ Failure err
-    Success targetPkgNames -> do
+    Left err -> return $ Left err
+    Right targetPkgNames -> do
       -- 0. Handle Source Dependencies (Git / Path)
       sourceDepResult <- handleSourceDependency opts
       case sourceDepResult of
-        Failure err -> return $ Failure err
-        Success () -> do
+        Left err -> return $ Left err
+        Right () -> do
           -- 1. Read file
           content <- TIO.readFile path
           
           -- 2. Process each package
-          finalContentResult <- foldM (processPackage maybeCtx opts) (Success content) targetPkgNames
+          finalContentResult <- foldM (processPackage maybeCtx opts) (Right content) targetPkgNames
           
           case finalContentResult of
-            Failure err -> return $ Failure err
-            Success finalContent -> 
+            Left err -> return $ Left err
+            Right finalContent -> 
               if aoDryRun opts
                 then do
                   logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
                   let diffs = diffLines (T.lines content) (T.lines finalContent)
                   colorizeDiff diffs
-                  return $ Success ()
+                  return $ Right ()
                 else safeWriteFile path finalContent
 
-handleInteractiveSearch :: [Text] -> IO (Result [Text])
+handleInteractiveSearch :: [Text] -> IO (Either Error [Text])
 handleInteractiveSearch [] = do
   logError "Please provide a search term for interactive mode: 'add -i <term>'"
-  return $ Success []
+  return $ Right []
 handleInteractiveSearch terms = do
   let query = T.intercalate " " terms
   logInfo $ "Searching Hackage for '" <> query <> "'..."
   searchResult <- searchPackages query
   case searchResult of
-    Failure err -> return $ Failure err
-    Success [] -> do
+    Left err -> return $ Left err
+    Right [] -> do
       logWarning "No packages found matching your search."
-      return $ Success []
-    Success results -> do
+      return $ Right []
+    Right results -> do
       selected <- selectItems "Select packages to add:" results
-      return $ Success selected
+      return $ Right selected
 
-processPackage :: Maybe ProjectContext -> AddOptions -> Result Text -> Text -> IO (Result Text)
-processPackage _ _ (Failure err) _ = return $ Failure err
-processPackage maybeCtx opts (Success currentContent) pkgNameText = do
+processPackage :: Maybe ProjectContext -> AddOptions -> Either Error Text -> Text -> IO (Either Error Text)
+processPackage _ _ (Left err) _ = return $ Left err
+processPackage maybeCtx opts (Right currentContent) pkgNameText = do
   case mkPackageName pkgNameText of
-    Left err -> return $ Failure $ Error err InvalidDependency
+    Left err -> return $ Left $ Error err InvalidDependency
     Right pkgName -> do
       -- Resolve version / Constraint
       let isSourceDep = isJust (aoGit opts) || isJust (aoPath opts)
       constraintResult <- if isSourceDep && isNothing (aoVersion opts)
-                          then return $ Success AnyVersion
+                          then return $ Right AnyVersion
                           else resolveVersionConstraint maybeCtx pkgName (aoVersion opts)
       
       case constraintResult of
-        Failure err -> return $ Failure err
-        Success constraint -> do
+        Left err -> return $ Left err
+        Right constraint -> do
           let dep = Dependency
                 { depName = pkgName
                 , depVersionConstraint = Just constraint
@@ -105,14 +105,14 @@ processPackage maybeCtx opts (Success currentContent) pkgNameText = do
                              TargetNamed n -> n
                              _ -> describeTarget baseTarget
           case addDependencyToAST targetName condition dep ast of
-            Failure err -> return $ Failure err
-            Success updatedAST -> return $ Success $ serializeAST updatedAST
+            Left err -> return $ Left err
+            Right updatedAST -> return $ Right $ serializeAST updatedAST
 
 
 
-handleSourceDependency :: AddOptions -> IO (Result ())
+handleSourceDependency :: AddOptions -> IO (Either Error ())
 handleSourceDependency opts
-  | aoDryRun opts = return $ Success () -- Skip project mod in dry-run for now
+  | aoDryRun opts = return $ Right () -- Skip project mod in dry-run for now
   | Just gitUrl <- aoGit opts = do
       (projPath, _) <- ensureProjectFile
       logInfo $ "Adding git dependency to " <> T.pack projPath
@@ -121,7 +121,7 @@ handleSourceDependency opts
       (projPath, _) <- ensureProjectFile
       logInfo $ "Adding local dependency to " <> T.pack projPath
       addLocalPackage projPath localPath
-  | otherwise = return $ Success ()
+  | otherwise = return $ Right ()
 
 isJust :: Maybe a -> Bool
 isJust (Just _) = True

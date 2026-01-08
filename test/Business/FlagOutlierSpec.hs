@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.FlagOutlierSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Flag
@@ -24,7 +25,7 @@ spec = describe "Business.Flag (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = FlagOptions (Just "myflag") FlagEnable False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       T.unpack final `shouldContain` "default: True"
@@ -41,7 +42,7 @@ spec = describe "Business.Flag (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = FlagOptions (Just "debug") FlagEnable False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       T.unpack final `shouldContain` "-- This is a comment"
@@ -56,7 +57,7 @@ spec = describe "Business.Flag (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = FlagOptions (Just "debug") FlagEnable False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       T.unpack final `shouldContain` "default: True" -- Normalized to TitleCase by our editor, usually
@@ -69,7 +70,7 @@ spec = describe "Business.Flag (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = FlagOptions (Just "debug") FlagEnable True False -- DryRun = True
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       final `shouldBe` content
@@ -80,7 +81,7 @@ spec = describe "Business.Flag (Outliers)" $ do
       let opts = FlagOptions (Just "existing") FlagAdd False False
       result <- handleFlag opts path
       case result of
-        Failure (Error msg InvalidDependency) -> T.unpack msg `shouldContain` "Flag already exists"
+        Left (Error msg InvalidDependency) -> T.unpack msg `shouldContain` "Flag already exists"
         _ -> expectationFailure $ "Expected failure, got " ++ show result
 
   it "fails gracefully when modifying a non-existent flag" $ do
@@ -89,12 +90,9 @@ spec = describe "Business.Flag (Outliers)" $ do
       let opts = FlagOptions (Just "missing") FlagEnable False False
       result <- handleFlag opts path
       case result of
-        Failure (Error msg FileNotFound) -> T.unpack msg `shouldContain` "Flag not found"
+        Left (Error msg FileNotFound) -> T.unpack msg `shouldContain` "Flag not found"
         _ -> expectationFailure $ "Expected failure, got " ++ show result
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

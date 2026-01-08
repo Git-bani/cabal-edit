@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Golden.RoundtripSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add
@@ -43,7 +44,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoInteractive = False
               }        
         resAdd <- addDependency Nothing addOpts path
-        resAdd `shouldSatisfy` isSuccess
+        resAdd `shouldSatisfy` isRight
         
         -- 2. Remove the same dependency
         let rmOpts = RemoveOptions
@@ -53,7 +54,7 @@ spec = describe "Golden Roundtrip" $ do
               }
               
         resRm <- removeDependency rmOpts path
-        resRm `shouldSatisfy` isSuccess
+        resRm `shouldSatisfy` isRight
         
         -- 3. Verify content match
         final <- TIO.readFile path
@@ -137,6 +138,3 @@ withFixture name action = do
 ignoringIOErrors :: IO () -> IO ()
 ignoringIOErrors act = catch act (\e -> let _ = (e :: IOException) in return ())
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False

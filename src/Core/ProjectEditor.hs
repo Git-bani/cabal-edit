@@ -12,7 +12,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.Directory (doesFileExist, getCurrentDirectory)
 import System.FilePath ((</>))
-import Core.Types (Result(..))
+import Core.Types
 import Core.ProjectContext (findProjectRoot)
 import Core.Safety (safeWriteFile) -- Generic safe write logic
 
@@ -33,25 +33,25 @@ ensureProjectFile = do
           return (path, True)
 
 -- | Add a source-repository-package block to cabal.project
-addSourceRepository :: FilePath -> Text -> Maybe Text -> IO (Result ())
+addSourceRepository :: FilePath -> Text -> Maybe Text -> IO (Either Error ())
 addSourceRepository path url tag = do
   content <- TIO.readFile path
   
   -- Check for duplicates (simple heuristic)
   if url `T.isInfixOf` content
-    then return $ Success ()
+    then return $ Right ()
     else do
       let newBlock = formatSourceRepoBlock url tag
       let newContent = appendBlock content newBlock
       safeWriteFile path newContent
 
 -- | Add a local package path to packages: section
-addLocalPackage :: FilePath -> Text -> IO (Result ())
+addLocalPackage :: FilePath -> Text -> IO (Either Error ())
 addLocalPackage path localPath = do
   content <- TIO.readFile path
   
   if localPath `T.isInfixOf` content
-    then return $ Success ()
+    then return $ Right ()
     else do
       -- We need to find "packages:" and append, or add "packages:"
       -- For simplicity, we can just add a new "packages:" line at the end

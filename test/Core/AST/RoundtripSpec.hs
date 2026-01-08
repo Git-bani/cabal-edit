@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Core.AST.RoundtripSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import qualified Data.Text.IO as TIO

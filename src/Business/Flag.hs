@@ -19,7 +19,7 @@ import Utils.Terminal (toggleDashboard)
 import Utils.Diff (diffLines, colorizeDiff)
 import Control.Monad (foldM)
 
-handleFlag :: FlagOptions -> FilePath -> IO (Result ())
+handleFlag :: FlagOptions -> FilePath -> IO (Either Error ())
 handleFlag opts path = do
   content <- TIO.readFile path
   let ast = parseAST content
@@ -27,12 +27,12 @@ handleFlag opts path = do
     then runFlagDashboard ast path opts
     else handleSingleFlag ast path opts
 
-runFlagDashboard :: CabalAST -> FilePath -> FlagOptions -> IO (Result ())
+runFlagDashboard :: CabalAST -> FilePath -> FlagOptions -> IO (Either Error ())
 runFlagDashboard ast path opts = do
   let flags = findFlagStanzasInAST ast
   
   if null flags
-    then return $ Failure $ Error "No flags found in project" FileNotFound
+    then return $ Left $ Error "No flags found in project" FileNotFound
     else do
       finalItemsWithStates <- toggleDashboard "Flag Dashboard" flags
       
@@ -42,53 +42,53 @@ runFlagDashboard ast path opts = do
               applyFlagToggle currentAst (name, newVal) =
                 case find (\(n, _) -> n == name) flags of
                   Just (_, oldVal) | oldVal /= newVal -> updateFlagDefaultInAST name newVal currentAst
-                  _ -> Success currentAst
+                  _ -> Right currentAst
       
       case finalASTResult of
-        Failure err -> return $ Failure err
-        Success finalAST -> 
+        Left err -> return $ Left err
+        Right finalAST -> 
           let newContent = serializeAST finalAST
               oldContent = serializeAST ast
           in writeOrDryRun opts path oldContent newContent
 
-handleSingleFlag :: CabalAST -> FilePath -> FlagOptions -> IO (Result ())
+handleSingleFlag :: CabalAST -> FilePath -> FlagOptions -> IO (Either Error ())
 handleSingleFlag ast path opts = do
   case foFlagName opts of
-    Nothing -> return $ Failure $ Error "Flag name required for non-interactive mode" InvalidDependency
+    Nothing -> return $ Left $ Error "Flag name required for non-interactive mode" InvalidDependency
     Just name -> do
       let flags = findFlagStanzasInAST ast
           existing = find (\(n, _) -> T.toLower n == T.toLower name) flags
       
       case (foOperation opts, existing) of
-        (FlagAdd, Just _) -> return $ Failure $ Error ("Flag already exists: " <> name) InvalidDependency
+        (FlagAdd, Just _) -> return $ Left $ Error ("Flag already exists: " <> name) InvalidDependency
         (FlagAdd, Nothing) -> 
           case addFlagToAST name ast of
-            Failure err -> return $ Failure err
-            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+            Left err -> return $ Left err
+            Right newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
         (FlagEnable, Just _) -> 
           case updateFlagDefaultInAST name True ast of
-            Failure err -> return $ Failure err
-            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+            Left err -> return $ Left err
+            Right newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
         (FlagDisable, Just _) -> 
           case updateFlagDefaultInAST name False ast of
-            Failure err -> return $ Failure err
-            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+            Left err -> return $ Left err
+            Right newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
         (FlagRemove, Just _) -> 
           case removeSectionFromAST "flag" name ast of
-            Failure err -> return $ Failure err
-            Success newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
-        (FlagEnable, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
-        (FlagDisable, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
-        (FlagRemove, Nothing) -> return $ Failure $ Error ("Flag not found: " <> name) FileNotFound
+            Left err -> return $ Left err
+            Right newAST -> writeOrDryRun opts path (serializeAST ast) (serializeAST newAST)
+        (FlagEnable, Nothing) -> return $ Left $ Error ("Flag not found: " <> name) FileNotFound
+        (FlagDisable, Nothing) -> return $ Left $ Error ("Flag not found: " <> name) FileNotFound
+        (FlagRemove, Nothing) -> return $ Left $ Error ("Flag not found: " <> name) FileNotFound
 
-writeOrDryRun :: FlagOptions -> FilePath -> Text -> Text -> IO (Result ())
+writeOrDryRun :: FlagOptions -> FilePath -> Text -> Text -> IO (Either Error ())
 writeOrDryRun opts path oldContent newContent = 
   if newContent == oldContent
-    then return $ Success ()
+    then return $ Right ()
     else if foDryRun opts
       then do
         logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
         let diffs = diffLines (T.lines oldContent) (T.lines newContent)
         colorizeDiff diffs
-        return $ Success ()
+        return $ Right ()
       else safeWriteFile path newContent

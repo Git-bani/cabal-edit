@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.SourceDepSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add
@@ -38,7 +39,7 @@ spec = describe "Business.SourceDep" $ do
       -- `findProjectRoot` uses `getCurrentDirectory`. So we must change dir.
       
       result <- addDependency Nothing opts cabalPath
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       -- Check .cabal file
       cabalContent <- TIO.readFile cabalPath
@@ -71,7 +72,7 @@ spec = describe "Business.SourceDep" $ do
             }
       
       result <- addDependency Nothing opts cabalPath
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       -- Check cabal.project
       projContent <- TIO.readFile projPath
@@ -91,9 +92,6 @@ basicCabalFile = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempEnv :: Text -> (FilePath -> FilePath -> FilePath -> IO a) -> IO a
 withTempEnv content action = do

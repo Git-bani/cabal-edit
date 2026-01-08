@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.SetVersionOutlierSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.SetVersion
@@ -29,7 +30,7 @@ spec = describe "Business.SetVersion (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = SetVersionOptions { svoVersion = "0.2", svoDryRun = False }
       result <- setVersion opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       T.unpack final `shouldContain` "-- Top comment"
@@ -45,7 +46,7 @@ spec = describe "Business.SetVersion (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = SetVersionOptions { svoVersion = "0.2", svoDryRun = False }
       result <- setVersion opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       T.unpack final `shouldContain` "VERSION: 0.2" -- Should preserve case of field key? Or normalize?
@@ -56,7 +57,7 @@ spec = describe "Business.SetVersion (Outliers)" $ do
     withTempCabalFile content $ \path -> do
       let opts = SetVersionOptions { svoVersion = "0.2", svoDryRun = True }
       result <- setVersion opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       final <- TIO.readFile path
       final `shouldBe` content
@@ -69,12 +70,9 @@ spec = describe "Business.SetVersion (Outliers)" $ do
       let opts = SetVersionOptions { svoVersion = "0.2", svoDryRun = False }
       result <- setVersion opts path
       case result of
-        Failure (Error msg ParseError) -> T.unpack msg `shouldContain` "Field not found"
+        Left (Error msg ParseError) -> T.unpack msg `shouldContain` "Field not found"
         _ -> expectationFailure $ "Expected failure, got " ++ show result
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

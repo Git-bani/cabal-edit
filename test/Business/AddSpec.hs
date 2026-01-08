@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.AddSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add
@@ -32,7 +33,7 @@ spec = describe "Business.Add" $ do
       
       result <- addDependency Nothing opts path
       
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldContain` "aeson ==2.0.0.0"
@@ -77,7 +78,7 @@ spec = describe "Business.Add" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       -- Verify it's in the test section (simple containment check)
@@ -99,7 +100,7 @@ spec = describe "Business.Add" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isFailure
+      result `shouldSatisfy` isLeft
 
   it "updates existing dependency version instead of duplicating" $ do
     withTempCabalFile basicCabalFile $ \path -> do
@@ -117,7 +118,7 @@ spec = describe "Business.Add" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       -- Should have updated version
@@ -141,7 +142,7 @@ spec = describe "Business.Add" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       -- Check for ^>= and some version number
@@ -163,7 +164,7 @@ spec = describe "Business.Add" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldContain` "bytestring ^>="
@@ -253,7 +254,7 @@ spec = describe "Business.Add" $ do
               , aoPath = Nothing
               }
         result <- addDependency Nothing opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         -- Should insert aligned with existing
@@ -278,7 +279,7 @@ spec = describe "Business.Add" $ do
               , aoPath = Nothing
               }
         result <- addDependency Nothing opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         -- Should add 'text' separately
@@ -313,7 +314,7 @@ spec = describe "Business.Add" $ do
               , aoPath = Nothing
               }
         result <- addDependency Nothing opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         T.unpack content `shouldContain` "if flag(enable-lens)"
@@ -335,7 +336,7 @@ spec = describe "Business.Add" $ do
               , aoPath = Nothing
               }
         result <- addDependency Nothing opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         T.unpack content `shouldContain` "if os(linux)"
@@ -362,13 +363,7 @@ basicCabalFile = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
-isFailure :: Result a -> Bool
-isFailure (Failure _) = True
-isFailure _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

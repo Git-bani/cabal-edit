@@ -22,7 +22,7 @@ import Data.Aeson (FromJSON(..), (.:), withObject)
 
 -- | Search for packages on Hackage by keyword
 -- Uses Hackage search API: GET /packages/search?terms={query}
-searchPackages :: Text -> IO (Result [Text])
+searchPackages :: Text -> IO (Either Error [Text])
 searchPackages query = do
   cfg <- loadConfig
   let url = cfgHackageUrl cfg <> "/packages/search?terms=" <> query
@@ -33,8 +33,8 @@ searchPackages query = do
   
   result <- httpGetJSON url :: IO (Either Error [HackageSearchResult])
   case result of
-    Left err -> return $ Failure err
-    Right searchResults -> return $ Success $ map hsrName searchResults
+    Left err -> return $ Left err
+    Right searchResults -> return $ Right $ map hsrName searchResults
 
 data HackageSearchResult = HackageSearchResult { hsrName :: Text }
 
@@ -43,21 +43,21 @@ instance FromJSON HackageSearchResult where
 
 -- | Fetch latest version of a package
 -- Uses Hackage JSON API: GET /package/{pkg} -> {"1.0.0":"normal", ...}
-fetchLatestVersion :: Text -> IO (Result Version)
+fetchLatestVersion :: Text -> IO (Either Error Version)
 fetchLatestVersion pkgName = do
   cfg <- loadConfig
   
   -- 1. Check Cache
   cached <- checkCache cfg pkgName
   case cached of
-    Just ver -> return $ Success ver
+    Just ver -> return $ Right ver
     Nothing -> do
       -- 2. Fetch Package Info
       let url = cfgHackageUrl cfg <> "/package/" <> pkgName
       result <- httpGetJSON url :: IO (Either Error (Map Text Text))
       
       case result of
-        Left err -> return $ Failure err
+        Left err -> return $ Left err
         Right versionMap -> do
           -- 3. Parse Map
           -- Filter for "normal" versions
@@ -66,11 +66,11 @@ fetchLatestVersion pkgName = do
           let versions = map parseVersionText (Map.keys validVersions)
           -- Get Maximum
           case versions of
-            [] -> return $ Failure $ Error ("No valid versions found for: " <> pkgName) InvalidDependency
+            [] -> return $ Left $ Error ("No valid versions found for: " <> pkgName) InvalidDependency
             vs -> do
               let latest = maximum vs
               saveCache pkgName latest
-              return $ Success latest
+              return $ Right latest
 
 -- | Fetch all versions
 fetchPackageVersions :: Text -> IO [Version]

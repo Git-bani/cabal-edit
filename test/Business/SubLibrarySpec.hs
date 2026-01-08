@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.SubLibrarySpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add
@@ -31,7 +32,7 @@ spec = describe "Sub-library Support" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       -- Verify it's in the sublib section
@@ -55,7 +56,7 @@ spec = describe "Sub-library Support" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       let (mainLib, subLib) = T.breakOn "library sublib" content
@@ -81,9 +82,6 @@ cabalWithSubLib = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

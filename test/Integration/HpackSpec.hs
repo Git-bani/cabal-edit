@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Integration.HpackSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import System.Directory (getCurrentDirectory, setCurrentDirectory, createDirectoryIfMissing, removeDirectoryRecursive)

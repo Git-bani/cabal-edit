@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Business.DebugAddSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add (addDependency)
@@ -29,12 +30,12 @@ spec = describe "Business.Add Debug" $ do
           }
     result <- addDependency Nothing opts path
     case result of
-      Success () -> do
+      Right () -> do
           newContent <- TIO.readFile path
           putStrLn "\n--- GENERATED CONTENT ---"
           TIO.putStrLn newContent
           putStrLn "--- END ---"
-      Failure err -> putStrLn $ "Error: " ++ show err
+      Left err -> putStrLn $ "Error: " ++ show err
     
     exists <- doesFileExist path
     if exists then removeFile path else return ()
@@ -59,12 +60,12 @@ spec = describe "Business.Add Debug" $ do
           }
     result <- addDependency Nothing opts path
     case result of
-      Success () -> do
+      Right () -> do
           newContent <- TIO.readFile path
           putStrLn "\n--- [Multi] GENERATED CONTENT ---"
           TIO.putStrLn newContent
           putStrLn "--- END ---"
-      Failure err -> putStrLn $ "Error: " ++ show err
+      Left err -> putStrLn $ "Error: " ++ show err
     
     exists <- doesFileExist path
     if exists then removeFile path else return ()
@@ -89,12 +90,12 @@ spec = describe "Business.Add Debug" $ do
           }
     result <- addDependency Nothing opts path
     case result of
-      Success () -> do
+      Right () -> do
           newContent <- TIO.readFile path
           putStrLn "\n--- [Test-Suite] GENERATED CONTENT ---"
           TIO.putStrLn newContent
           putStrLn "--- END ---"
-      Failure err -> putStrLn $ "Error: " ++ show err
+      Left err -> putStrLn $ "Error: " ++ show err
     
     exists <- doesFileExist path
     if exists then removeFile path else return ()

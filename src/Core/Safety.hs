@@ -22,13 +22,13 @@ import Control.Concurrent (threadDelay)
 import Data.Text.Encoding (encodeUtf8)
 
 -- | Simple directory-based locking
-withFileLock :: FilePath -> IO (Result a) -> IO (Result a)
+withFileLock :: FilePath -> IO (Either Error a) -> IO (Either Error a)
 withFileLock path action = do
   let lockPath = path <.> "lock"
   logDebug $ "Acquiring lock: " <> T.pack lockPath
   acq <- acquireLock lockPath 10
   case acq of
-    Left err -> return $ Failure err
+    Left err -> return $ Left err
     Right () -> bracket
       (return ())
       (\_ -> do
@@ -57,25 +57,25 @@ releaseLock path =
         (\e -> let _ = (e :: IOException) in return ())
 
 -- | Safely write to a cabal file with locking, backup, and verification
-withSafeWrite :: FilePath -> Text -> (CabalFile -> IO CabalFile) -> IO (Result ())
+withSafeWrite :: FilePath -> Text -> (CabalFile -> IO CabalFile) -> IO (Either Error ())
 withSafeWrite path originalContent _ = do
   withFileLock path $ do
     createBackup path
     currentContent <- TIO.readFile path
     if currentContent /= originalContent
-      then return $ Failure $ Error "File changed on disk before write" FileModificationError
+      then return $ Left $ Error "File changed on disk before write" FileModificationError
       else do
-        return $ Failure $ Error "Not implemented fully yet" FileModificationError
+        return $ Left $ Error "Not implemented fully yet" FileModificationError
 
 -- | Better signature for the safety wrapper
-safeWriteCabal :: FilePath -> Text -> IO (Result ())
+safeWriteCabal :: FilePath -> Text -> IO (Either Error ())
 safeWriteCabal path newContent = do
    case verifyCabalContent newContent of
-     Left err -> return $ Failure $ Error ("Verification failed: " <> err) ParseError
+     Left err -> return $ Left $ Error ("Verification failed: " <> err) ParseError
      Right _ -> safeWriteFile path newContent
 
 -- | Generic safe write (atomic + backup + locking) without Cabal verification
-safeWriteFile :: FilePath -> Text -> IO (Result ())
+safeWriteFile :: FilePath -> Text -> IO (Either Error ())
 safeWriteFile path newContent = do
   withFileLock path $ do
      createBackup path
@@ -87,7 +87,7 @@ safeWriteFile path newContent = do
      let writeAction = do
            BS.writeFile tempPath (encodeUtf8 newContent)
            renameFile tempPath path
-           return $ Success ()
+           return $ Right ()
            
      writeAction `onException` (ignoringIOErrors $ removeFile tempPath)
 

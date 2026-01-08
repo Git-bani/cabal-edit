@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.ValidationSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Test.Hspec.Hedgehog
@@ -17,12 +18,12 @@ spec = describe "Business.Validation" $ do
   describe "validatePackageName" $ do
     it "accepts valid package names" $ hedgehog $ do
       name <- forAll genValidPackageName
-      validatePackageName name === Success ()
+      validatePackageName name === Right ()
 
     it "rejects empty names" $ do
       let result = validatePackageName ""
       case result of
-        Failure (Error msg _) -> T.unpack msg `shouldContain` "cannot be empty"
+        Left (Error msg _) -> T.unpack msg `shouldContain` "cannot be empty"
         _ -> expectationFailure "Should have failed"
 
     it "rejects names starting/ending with hyphens" $ hedgehog $ do
@@ -33,21 +34,21 @@ spec = describe "Business.Validation" $ do
       let res1 = validatePackageName invalidStart
       let res2 = validatePackageName invalidEnd
       
-      isFailure res1 === True
-      isFailure res2 === True
+      isLeft res1 === True
+      isLeft res2 === True
 
     it "rejects names with consecutive hyphens" $ hedgehog $ do
       name <- forAll genValidPackageName
       let invalid = name <> "--" <> name
       let res = validatePackageName invalid
-      isFailure res === True
+      isLeft res === True
       
     it "rejects names with invalid characters" $ hedgehog $ do
       name <- forAll genValidPackageName
       invalidChar <- forAll $ Gen.element ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', ' ']
       let invalid = name <> T.singleton invalidChar <> name
       let res = validatePackageName invalid
-      isFailure res === True
+      isLeft res === True
 
 -- Generators
 
@@ -61,6 +62,3 @@ genValidPackageName = do
 genSegment :: Gen Text
 genSegment = Gen.text (Range.linear 1 10) Gen.alphaNum
 
-isFailure :: Result a -> Bool
-isFailure (Failure _) = True
-isFailure _ = False

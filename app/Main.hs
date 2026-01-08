@@ -37,10 +37,10 @@ main = do
   let timeStr = printf "%.2fs" (realToFrac diff :: Double)
   
   case result of
-    Success _ -> do
+    Right _ -> do
         logSuccess $ T.pack $ "Success! (took " ++ timeStr ++ ")"
         exitSuccess
-    Failure err -> do
+    Left err -> do
       logError (errorMessage err)
       exitWith (ExitFailure 1)
 
@@ -235,7 +235,7 @@ parseSectionTarget s =
             else TargetNamed (T.pack s)
 
 -- Execute parsed command
-executeCommand :: CLI -> IO (Result ())
+executeCommand :: CLI -> IO (Either Error ())
 executeCommand (CLI verbose quiet workspace packages cmd) = do
   if quiet 
     then setLogLevel Quiet
@@ -276,7 +276,7 @@ executeCommand (CLI verbose quiet workspace packages cmd) = do
           return $ maybe [] (\path -> [(Nothing, path)]) f
 
   if null targetFilesWithCtx
-    then return $ Failure $ Error "No .cabal files found" FileNotFound
+    then return $ Left $ Error "No .cabal files found" FileNotFound
     else do
       let count = length targetFilesWithCtx
       when (count > 1) $
@@ -285,12 +285,12 @@ executeCommand (CLI verbose quiet workspace packages cmd) = do
       forM_ targetFilesWithCtx $ \(mCtx, path) -> do
         res <- runOn mCtx path cmd
         case res of
-          Failure e -> logError $ "Failed on " <> T.pack path <> ": " <> errorMessage e
-          Success _ -> return ()
+          Left e -> logError $ "Failed on " <> T.pack path <> ": " <> errorMessage e
+          Right _ -> return ()
       
-      return $ Success ()
+      return $ Right ()
 
-runOn :: Maybe ProjectContext -> FilePath -> Command -> IO (Result ())
+runOn :: Maybe ProjectContext -> FilePath -> Command -> IO (Either Error ())
 runOn maybeCtx path cmd = do
   let actionDesc = describeAction cmd
   

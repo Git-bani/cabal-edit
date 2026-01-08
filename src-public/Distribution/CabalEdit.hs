@@ -25,7 +25,6 @@ module Distribution.CabalEdit
   , UpgradeOptions(..)
 
     -- * Results and Errors
-  , Result(..)
   , Error(..)
   , ErrorCode(..)
 
@@ -41,7 +40,6 @@ import Core.Types
   , AddOptions(..)
   , RemoveOptions(..)
   , UpgradeOptions(..)
-  , Result(..)
   , Error(..)
   , ErrorCode(..)
   )

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Core.SafetySpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Core.Safety
 import Core.Types
@@ -29,7 +30,7 @@ spec = describe "Core.Safety" $ do
       withTempFile "valid.cabal" "name: foo" $ \path -> do
         let newContent = "name: foo\nversion: 1.0"
         res <- safeWriteCabal path newContent
-        res `shouldSatisfy` isSuccess
+        res `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         content `shouldBe` newContent
@@ -40,7 +41,7 @@ spec = describe "Core.Safety" $ do
         res <- safeWriteCabal path newContent
         
         case res of
-          Failure (Error _ ParseError) -> return ()
+          Left (Error _ ParseError) -> return ()
           _ -> expectationFailure $ "Should have failed with ParseError, got: " ++ show res
         
         -- File should retain original content
@@ -58,17 +59,8 @@ spec = describe "Core.Safety" $ do
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
-isRight :: Either a b -> Bool
-isRight (Right _) = True
-isRight _ = False
 
-isLeft :: Either a b -> Bool
-isLeft (Left _) = True
-isLeft _ = False
 
 withTempFile :: FilePath -> Text -> (FilePath -> IO a) -> IO a
 withTempFile name content action = do

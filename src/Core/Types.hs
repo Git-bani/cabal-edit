@@ -43,7 +43,6 @@ module Core.Types
   , ListOptions(..)
   
     -- * Results
-  , Result(..)
   , Error(..)
   , ErrorCode(..)
   ) where
@@ -272,27 +271,6 @@ data UpgradeOptions = UpgradeOptions
   , uoPackageNames :: [Text]  -- Empty means all
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)
-
--- Result types
-data Result a
-  = Success a
-  | Failure Error
-  deriving (Show, Eq, Generic, NFData)
-
-instance Functor Result where
-  fmap f (Success a) = Success (f a)
-  fmap _ (Failure e) = Failure e
-
-instance Applicative Result where
-  pure = Success
-  Success f <*> Success a = Success (f a)
-  Failure e <*> _ = Failure e
-  _ <*> Failure e = Failure e
-
-instance Monad Result where
-  return = pure
-  Success a >>= f = f a
-  Failure e >>= _ = Failure e
 
 data Error = Error
   { errorMessage :: Text

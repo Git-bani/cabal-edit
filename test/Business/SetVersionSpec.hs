@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.SetVersionSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.SetVersion
@@ -23,7 +24,7 @@ spec = describe "Business.SetVersion" $ do
             }
       
       result <- setVersion opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldContain` "version: 1.2.3.4"
@@ -41,9 +42,6 @@ basicCabalFile = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

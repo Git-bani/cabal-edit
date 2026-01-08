@@ -15,7 +15,7 @@ module Core.AST.Editor
 where
 
 import Core.AST.Types
-import Core.Types (Dependency(..), mkPackageName, unPackageName, Result(..), Error(..), ErrorCode(..), DependencyType(..), VersionConstraint(..), Version(..))
+import Core.Types (Dependency(..), mkPackageName, unPackageName, Error(..), ErrorCode(..), DependencyType(..), VersionConstraint(..), Version(..))
 import Core.AST.Serializer (formatDependency)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -28,28 +28,28 @@ isVersionOpStart :: Char -> Bool
 isVersionOpStart c = c `elem` ("> <=^" :: String)
 
 -- | Add a dependency to a specific target in the AST, optionally inside an 'if' block
-addDependencyToAST :: Text -> Maybe Text -> Dependency -> CabalAST -> Result CabalAST
+addDependencyToAST :: Text -> Maybe Text -> Dependency -> CabalAST -> Either Error CabalAST
 addDependencyToAST targetSection mCondition dep (CabalAST items) = 
   let (updatedItems, found) = runUpdateFilter (updateSection targetSection mCondition (addDepToItems dep)) items
   in if found 
-     then Success $ CabalAST updatedItems
-     else Failure $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
 
 -- | Update a dependency version in a specific target
-updateDependencyInAST :: Text -> Maybe Text -> Dependency -> CabalAST -> Result CabalAST
+updateDependencyInAST :: Text -> Maybe Text -> Dependency -> CabalAST -> Either Error CabalAST
 updateDependencyInAST targetSection mCondition dep (CabalAST items) = 
   let (updatedItems, found) = runUpdateFilter (updateSection targetSection mCondition (addDepToItems dep)) items
   in if found 
-     then Success $ CabalAST updatedItems
-     else Failure $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
 
 -- | Update a specific field value globally (useful for top-level fields like version)
-updateFieldInAST :: Text -> Text -> CabalAST -> Result CabalAST
+updateFieldInAST :: Text -> Text -> CabalAST -> Either Error CabalAST
 updateFieldInAST name newVal (CabalAST items) = 
   let (updatedItems, found) = runUpdate (updateField name newVal) items
   in if found 
-     then Success $ CabalAST updatedItems
-     else Failure $ Error ("Field not found: " <> name) ParseError
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Field not found: " <> name) ParseError
 
 updateField :: Text -> Text -> CabalItem -> (CabalItem, Bool)
 updateField targetName newVal (FieldItem fl)
@@ -92,7 +92,7 @@ findFlagStanzasInAST (CabalAST items) =
         _ -> Nothing
 
 -- | Add a new flag to the AST
-addFlagToAST :: Text -> CabalAST -> Result CabalAST
+addFlagToAST :: Text -> CabalAST -> Either Error CabalAST
 addFlagToAST name (CabalAST items) =
   let term = detectDefaultTerminator items
       newStanza = SectionItem (SectionLine 0 "flag" name term)
@@ -106,7 +106,7 @@ addFlagToAST name (CabalAST items) =
               Just i -> i
               Nothing -> length items
       updatedItems = take idx items ++ [newStanza] ++ drop idx items
-  in Success $ CabalAST updatedItems
+  in Right $ CabalAST updatedItems
 
 detectDefaultTerminator :: [CabalItem] -> Text
 detectDefaultTerminator items =
@@ -126,12 +126,12 @@ isSection (SectionItem _ _) = True
 isSection _ = False
 
 -- | Update a flag's default value
-updateFlagDefaultInAST :: Text -> Bool -> CabalAST -> Result CabalAST
+updateFlagDefaultInAST :: Text -> Bool -> CabalAST -> Either Error CabalAST
 updateFlagDefaultInAST name val (CabalAST items) =
   let (updatedItems, found) = runUpdate (updateSpecificFlag name val) items
   in if found 
-     then Success $ CabalAST updatedItems
-     else Failure $ Error ("Flag not found: " <> name) FileNotFound
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Flag not found: " <> name) FileNotFound
 
 updateSpecificFlag :: Text -> Bool -> CabalItem -> (CabalItem, Bool)
 updateSpecificFlag targetName val (SectionItem sl children)
@@ -145,13 +145,13 @@ updateSpecificFlag targetName val (SectionItem sl children)
 updateSpecificFlag _ _ item = (item, False)
 
 -- | Remove a section (e.g. flag) from the AST
-removeSectionFromAST :: Text -> Text -> CabalAST -> Result CabalAST
+removeSectionFromAST :: Text -> Text -> CabalAST -> Either Error CabalAST
 removeSectionFromAST sType sArgs (CabalAST items) =
   let targetHeader = sType <> (if T.null sArgs then "" else " " <> sArgs)
       (updatedItems, found) = runUpdateFilter (removeSpecificSection sType sArgs) items
   in if found
-     then Success $ CabalAST updatedItems
-     else Failure $ Error ("Section not found: " <> targetHeader) FileNotFound
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Section not found: " <> targetHeader) FileNotFound
 
 removeSpecificSection :: Text -> Text -> CabalItem -> (Maybe CabalItem, Bool)
 removeSpecificSection tType tArgs (SectionItem sl _)
@@ -160,12 +160,12 @@ removeSpecificSection tType tArgs (SectionItem sl _)
 removeSpecificSection _ _ item = (Just item, False)
 
 -- | Remove a dependency from a specific target in the AST
-removeDependencyFromAST :: Text -> Maybe Text -> Text -> CabalAST -> Result CabalAST
+removeDependencyFromAST :: Text -> Maybe Text -> Text -> CabalAST -> Either Error CabalAST
 removeDependencyFromAST targetSection mCondition pkgName (CabalAST items) = 
   let (updatedItems, found) = runUpdateFilter (updateSection targetSection mCondition (removeDepFromItems pkgName)) items
   in if found 
-     then Success $ CabalAST updatedItems
-     else Failure $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
 
 -- | Find all (SectionName, Maybe Condition) pairs where a package is used
 findDependencyInAST :: Text -> CabalAST -> [(Text, Maybe Text)]

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Utils.DiffSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Test.Hspec.Hedgehog

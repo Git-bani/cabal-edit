@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.CommonStanzaSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Add
@@ -31,7 +32,7 @@ spec = describe "Common Stanza Support" $ do
             }
       
       result <- addDependency Nothing opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       let (_before, common) = T.breakOn "common shared-props" content
@@ -55,9 +56,6 @@ commonCabal = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

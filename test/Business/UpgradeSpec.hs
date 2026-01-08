@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.UpgradeSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Upgrade
@@ -39,9 +40,9 @@ spec = describe "Business.Upgrade" $ do
       -- It might fail if network fails, or succeed if it finds nothing.
       -- Let's just assume success or handled failure.
       case result of
-        Failure (Error _ NetworkError) -> return () -- Acceptable
-        Success _ -> return ()
-        Failure e -> expectationFailure $ "Unexpected failure: " ++ show e
+        Left (Error _ NetworkError) -> return () -- Acceptable
+        Right _ -> return ()
+        Left e -> expectationFailure $ "Unexpected failure: " ++ show e
 
 basicCabalFile :: Text
 basicCabalFile = T.unlines

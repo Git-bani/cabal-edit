@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.FlagSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Flag
@@ -19,7 +20,7 @@ spec = describe "Cabal Flag Management" $ do
     withTempCabalFile basicCabal $ \path -> do
       let opts = FlagOptions (Just "dev") FlagAdd False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldContain` "flag dev"
@@ -34,7 +35,7 @@ spec = describe "Cabal Flag Management" $ do
     withTempCabalFile cabalWithFlag $ \path -> do
       let opts = FlagOptions (Just "dev") FlagEnable False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldContain` "default: True"
@@ -48,7 +49,7 @@ spec = describe "Cabal Flag Management" $ do
     withTempCabalFile cabalWithFlag $ \path -> do
       let opts = FlagOptions (Just "dev") FlagDisable False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldContain` "default: False"
@@ -62,7 +63,7 @@ spec = describe "Cabal Flag Management" $ do
     withTempCabalFile cabalWithFlag $ \path -> do
       let opts = FlagOptions (Just "dev") FlagRemove False False
       result <- handleFlag opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldNotContain` "flag dev"
@@ -78,9 +79,6 @@ basicCabal = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Business.RemoveSpec (spec) where
+import Data.Either (isRight, isLeft)
 
 import Test.Hspec
 import Business.Remove
@@ -24,7 +25,7 @@ spec = describe "Business.Remove" $ do
             }
       
       result <- removeDependency opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldNotContain` "text"
@@ -39,7 +40,7 @@ spec = describe "Business.Remove" $ do
             }
       
       result <- removeDependency opts path
-      result `shouldSatisfy` isFailure
+      result `shouldSatisfy` isLeft
       -- verify content unchanged
       content <- TIO.readFile path
       T.unpack content `shouldContain` "text"
@@ -53,7 +54,7 @@ spec = describe "Business.Remove" $ do
             }
       
       result <- removeDependency opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldNotContain` "hspec"
@@ -67,7 +68,7 @@ spec = describe "Business.Remove" $ do
             }
       
       result <- removeDependency opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldNotContain` "base"
@@ -84,7 +85,7 @@ spec = describe "Business.Remove" $ do
             }
       
       result <- removeDependency opts path
-      result `shouldSatisfy` isSuccess
+      result `shouldSatisfy` isRight
       
       content <- TIO.readFile path
       T.unpack content `shouldNotContain` "hspec"
@@ -103,7 +104,7 @@ spec = describe "Business.Remove" $ do
               , roDryRun = False, roInteractive = False
               }
         result <- removeDependency opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         T.unpack content `shouldNotContain` "Win32"
@@ -121,7 +122,7 @@ spec = describe "Business.Remove" $ do
               , roDryRun = False, roInteractive = False
               }
         result <- removeDependency opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         -- Should have removed base
@@ -144,7 +145,7 @@ spec = describe "Business.Remove" $ do
               , roDryRun = False, roInteractive = False
               }
         result <- removeDependency opts path
-        result `shouldSatisfy` isSuccess
+        result `shouldSatisfy` isRight
         
         content <- TIO.readFile path
         T.unpack content `shouldNotContain` "Win32"
@@ -173,13 +174,7 @@ basicCabalFile = T.unlines
 
 -- Helpers
 
-isSuccess :: Result a -> Bool
-isSuccess (Success _) = True
-isSuccess _ = False
 
-isFailure :: Result a -> Bool
-isFailure (Failure _) = True
-isFailure _ = False
 
 withTempCabalFile :: Text -> (FilePath -> IO a) -> IO a
 withTempCabalFile content action = do

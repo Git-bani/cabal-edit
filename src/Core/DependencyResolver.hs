@@ -15,7 +15,7 @@ import qualified Distribution.Parsec as CabalParsec
 import qualified Distribution.Types.VersionRange as CabalVR
 
 -- | Resolve to the latest version from Hackage
-resolveLatestVersion :: PackageName -> IO (Result Version)
+resolveLatestVersion :: PackageName -> IO (Either Error Version)
 resolveLatestVersion pkgName = fetchLatestVersion (unPackageName pkgName)
 
 -- | Resolve version constraint
@@ -23,7 +23,7 @@ resolveLatestVersion pkgName = fetchLatestVersion (unPackageName pkgName)
 -- If NO constraint is provided:
 --   1. Check if it's a workspace member (if context provided).
 --   2. Otherwise, fetch LATEST from Hackage.
-resolveVersionConstraint :: Maybe ProjectContext -> PackageName -> Maybe Text -> IO (Result VersionConstraint)
+resolveVersionConstraint :: Maybe ProjectContext -> PackageName -> Maybe Text -> IO (Either Error VersionConstraint)
 resolveVersionConstraint maybeCtx pkgName Nothing = do
   -- 1. Check Workspace
   let isWorkspaceMember = case maybeCtx of
@@ -31,21 +31,21 @@ resolveVersionConstraint maybeCtx pkgName Nothing = do
         Just ctx -> any (\(name, _) -> name == pkgName) (pcPackages ctx)
   
   if isWorkspaceMember
-    then return $ Success WorkspaceVersion
+    then return $ Right WorkspaceVersion
     else do
       -- 2. Check Hackage
       res <- resolveLatestVersion pkgName
       case res of
-        Success v -> return $ Success (MajorBoundVersion v)
-        Failure e -> 
+        Right v -> return $ Right (MajorBoundVersion v)
+        Left e -> 
           if errorCode e == NetworkError
             then do
               logWarning $ "Could not fetch latest version for " <> unPackageName pkgName <> " (offline?). Adding without constraint."
-              return $ Success AnyVersion
-            else return $ Failure e
+              return $ Right AnyVersion
+            else return $ Left e
 
 resolveVersionConstraint _ _ (Just constraint) = do
   -- Validate the constraint syntax using Cabal's parser
   case CabalParsec.simpleParsec (T.unpack constraint) :: Maybe CabalVR.VersionRange of
-    Nothing -> return $ Failure $ Error ("Invalid version constraint syntax: " <> constraint) InvalidDependency
-    Just _  -> return $ Success (UnparsedVersion constraint)
+    Nothing -> return $ Left $ Error ("Invalid version constraint syntax: " <> constraint) InvalidDependency
+    Just _  -> return $ Right (UnparsedVersion constraint)

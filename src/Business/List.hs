@@ -12,12 +12,12 @@ import Data.List (groupBy, sortOn)
 import Data.Function (on)
 import qualified Distribution.Pretty as DP
 
-listDependencies :: ListOptions -> FilePath -> IO (Result ())
+listDependencies :: ListOptions -> FilePath -> IO (Either Error ())
 listDependencies opts path = do
   content <- TIO.readFile path
   let ast = parseAST content
   TIO.putStrLn $ formatDependenciesAST opts ast
-  return $ Success ()
+  return $ Right ()
 
 formatDependenciesAST :: ListOptions -> CabalAST -> T.Text
 formatDependenciesAST _ ast = 
