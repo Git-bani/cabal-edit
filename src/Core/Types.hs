@@ -14,6 +14,8 @@ module Core.Types
   , Benchmark(..)
   , CommonStanza(..)
   , FlagStanza(..)
+  , Mixin(..)
+  , Renaming(..)
   , Dependency(..)
   , DependencyType(..)
   , DependencyOperation(..)
@@ -131,6 +133,17 @@ data FlagStanza = FlagStanza
   , flagManual :: Bool
   , flagPosition :: TextSpan
   } deriving (Show, Eq, Generic, NFData)
+
+data Mixin = Mixin
+  { mixinPackage :: PackageName
+  , mixinRenaming :: Renaming
+  } deriving (Show, Eq, Generic, NFData)
+
+data Renaming
+  = DefaultRenaming
+  | Hiding [Text]
+  | Renaming [(Text, Text)] -- (Old as New)
+  deriving (Show, Eq, Generic, NFData)
 
 data Library = Library
   { libName :: Maybe Text

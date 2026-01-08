@@ -3,10 +3,11 @@ module Core.AST.Serializer
   ( serializeAST
   , formatDependency
   , formatVersionConstraint
+  , formatMixin
   ) where
 
 import Core.AST.Types
-import Core.Types (Dependency(..), VersionConstraint(..), Version(..), VersionRange(..), BoundType(..), unPackageName)
+import Core.Types (Dependency(..), VersionConstraint(..), Version(..), VersionRange(..), BoundType(..), unPackageName, Mixin(..), Renaming(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Distribution.Pretty as CabalPretty
@@ -87,3 +88,21 @@ formatVersionRange range =
                   then " && "
                   else ""
    in lower <> connector <> upper
+
+--------------------------------------------------------------------------------
+-- Mixin Formatting
+--------------------------------------------------------------------------------
+
+formatMixin :: Mixin -> Text
+formatMixin (Mixin pkg renaming) =
+  unPackageName pkg <> formatRenaming renaming
+
+formatRenaming :: Renaming -> Text
+formatRenaming DefaultRenaming = ""
+formatRenaming (Hiding mods) =
+  if null mods then "" else " hiding (" <> T.intercalate ", " mods <> ")"
+formatRenaming (Renaming renames) =
+  if null renames then "" else " (" <> T.intercalate ", " (map formatRename renames) <> ")"
+
+formatRename :: (Text, Text) -> Text
+formatRename (orig, new) = orig <> " as " <> new

@@ -2,6 +2,7 @@
 {-# LANGUAGE TupleSections #-}
 module Core.AST.Editor
   ( addDependencyToAST
+  , addMixinToAST
   , removeDependencyFromAST
   , updateDependencyInAST
   , updateFieldInAST
@@ -16,8 +17,8 @@ module Core.AST.Editor
 where
 
 import Core.AST.Types
-import Core.Types (Dependency(..), mkPackageName, unPackageName, Error(..), ErrorCode(..), DependencyType(..), VersionConstraint(..), Version(..))
-import Core.AST.Serializer (formatDependency)
+import Core.Types (Dependency(..), mkPackageName, unPackageName, Error(..), ErrorCode(..), DependencyType(..), VersionConstraint(..), Version(..), Mixin(..))
+import Core.AST.Serializer (formatDependency, formatMixin)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.List (find, findIndex)
@@ -45,6 +46,14 @@ isVersionOpStart c = c `elem` ("> <=^" :: String)
 addDependencyToAST :: Text -> Maybe Text -> Dependency -> CabalAST -> Either Error CabalAST
 addDependencyToAST targetSection mCondition dep (CabalAST items) = 
   let (updatedItems, found) = runUpdateFilter (updateSection targetSection mCondition (addDepToItems dep)) items
+  in if found 
+     then Right $ CabalAST updatedItems
+     else Left $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
+
+-- | Add a mixin to a specific target
+addMixinToAST :: Text -> Maybe Text -> Mixin -> CabalAST -> Either Error CabalAST
+addMixinToAST targetSection mCondition mixin (CabalAST items) = 
+  let (updatedItems, found) = runUpdateFilter (updateSection targetSection mCondition (addMixinToItems mixin)) items
   in if found 
      then Right $ CabalAST updatedItems
      else Left $ Error ("Section not found: " <> targetSection <> maybe "" (" with condition " <>) mCondition) InvalidDependency
@@ -624,3 +633,124 @@ detectCommonIndent baseIndent firstLine restLines =
       let spacesBeforeValue = T.length $ T.takeWhile (== ' ') firstLine
           valIndent = baseIndent + 13 + 1 + spacesBeforeValue
       in valIndent
+
+--------------------------------------------------------------------------------
+-- Mixin Logic
+--------------------------------------------------------------------------------
+
+addMixinToItems :: Mixin -> [CabalItem] -> [CabalItem]
+addMixinToItems mixin items = 
+  let items' = ensureMixinsField items
+  in case findIndex isMixinsField items' of
+    Just idx -> 
+      case items' !! idx of
+        FieldItem fl -> 
+          let updatedField = addOrUpdateMixinInField mixin fl
+          in take idx items' ++ [FieldItem updatedField] ++ drop (idx + 1) items'
+        _ -> items'
+    Nothing -> items'
+
+ensureMixinsField :: [CabalItem] -> [CabalItem]
+ensureMixinsField items =
+  if any isMixinsField items
+  then items
+  else 
+    -- Insert after build-depends if possible, or at end
+    case findIndex isBuildDepends items of
+      Just idx -> 
+        let term = detectDefaultTerminator items
+            indent = detectBaseIndentAST items
+            newField = FieldItem (FieldLine indent "mixins" "" term)
+        in take (idx + 1) items ++ [newField] ++ drop (idx + 1) items
+      Nothing -> 
+        let term = detectDefaultTerminator items
+            indent = detectBaseIndentAST items
+            newField = FieldItem (FieldLine indent "mixins" "" term)
+        in items ++ [newField]
+
+isMixinsField :: CabalItem -> Bool
+isMixinsField (FieldItem fl) = T.toLower (fieldName fl) == "mixins"
+isMixinsField _ = False
+
+addOrUpdateMixinInField :: Mixin -> FieldLine -> FieldLine
+addOrUpdateMixinInField mixin fl = 
+  let val = fieldValue fl
+      pkgName = unPackageName (mixinPackage mixin)
+  in if isPkgInText pkgName val
+     then updateExistingMixin mixin fl
+     else addNewMixin mixin fl
+
+updateExistingMixin :: Mixin -> FieldLine -> FieldLine
+updateExistingMixin mixin fl = 
+  let val = fieldValue fl
+      pkgName = unPackageName (mixinPackage mixin)
+      ls = splitPreservingLineEndings val
+      newLs = map (\(l, t) -> (updateSpecificLineForMixin pkgName mixin l, t)) ls
+  in fl { fieldValue = T.concat (map (uncurry (<>)) newLs) }
+
+updateSpecificLineForMixin :: Text -> Mixin -> Text -> Text
+updateSpecificLineForMixin pkgName mixin line = 
+  let (indent, rest) = T.span (== ' ') line
+      parts = T.splitOn "," rest
+      updatePart p = if isPkgInPart pkgName p
+                     then let (prefix, _) = T.span (== ' ') p
+                          in prefix <> formatMixin mixin
+                     else p
+      newParts = map updatePart parts
+  in indent <> T.intercalate "," newParts
+
+addNewMixin :: Mixin -> FieldLine -> FieldLine
+addNewMixin mixin fl = 
+  -- Reuse addNewDep logic pattern but for mixin format
+  -- Duplicate logic for now to avoid refactoring dependency specific stuff
+  let val = fieldValue fl
+      ls = splitPreservingLineEndings val
+      baseIndent = fieldIndent fl
+      term = if T.null (fieldLineEnding fl) then "\n" else fieldLineEnding fl
+  in case ls of
+    [(s, _)] -> 
+      let mixStr = formatMixin mixin
+          newVal = if T.null (T.strip s) 
+                   then " " <> mixStr 
+                   else s <> ", " <> mixStr
+      in fl { fieldValue = newVal }
+    [] -> 
+      let mixStr = formatMixin mixin
+      in fl { fieldValue = " " <> mixStr }
+    ((firstLine, _):restLines) ->
+      let nonCommentRest = filter (not . T.isPrefixOf "--" . T.stripStart . fst) restLines
+          style = if any (T.isPrefixOf "," . T.stripStart . fst) nonCommentRest then Leading else Trailing
+          indent = detectCommonIndent baseIndent firstLine (map fst restLines)
+          isLeading = case style of { Leading -> True; Trailing -> False }
+          actualIndent = if indent <= baseIndent 
+                         then baseIndent + 4 
+                         else indent
+          
+          val' = if not isLeading 
+                 then ensureTrailingComma val 
+                 else val
+          
+          mixStr = if isLeading 
+                   then T.replicate actualIndent " " <> ", " <> formatMixin mixin
+                   else T.replicate actualIndent " " <> formatMixin mixin
+
+          ls' = splitPreservingLineEndings val'
+          isRelevant (l, _) = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
+          lastIdx = case findIndex isRelevant (reverse ls') of
+                      Just i -> length ls' - 1 - i
+                      Nothing -> length ls' - 1
+          
+          (pre, post) = splitAt (lastIdx + 1) ls'
+          lastTerm = case reverse pre of
+                       ((_, t):_) -> t
+                       [] -> term
+          actualLastTerm = if T.null lastTerm then term else lastTerm
+          newTerm = if T.null lastTerm then "" else actualLastTerm
+          
+          updateLastTerm [] = []
+          updateLastTerm [(l, _)] = [(l, actualLastTerm)]
+          updateLastTerm (x:xs) = x : updateLastTerm xs
+          
+          preUpdated = updateLastTerm pre
+          newVal = T.concat (map (uncurry (<>)) preUpdated) <> mixStr <> newTerm <> T.concat (map (uncurry (<>)) post)
+      in fl { fieldValue = newVal }
