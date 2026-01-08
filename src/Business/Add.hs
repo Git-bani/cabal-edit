@@ -11,7 +11,7 @@ import Core.DependencyResolver
 import Core.ProjectEditor
 import Core.ProjectContext (ProjectContext)
 import Utils.Logging (logInfo, logError, logWarning)
-import Utils.Terminal (selectItems)
+import Utils.Terminal (selectPackages)
 import External.Hackage (searchPackages)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -67,7 +67,7 @@ handleInteractiveSearch terms = do
       logWarning "No packages found matching your search."
       return $ Right []
     Right results -> do
-      selected <- selectItems "Select packages to add:" results
+      selected <- selectPackages "Select packages to add:" results
       return $ Right selected
 
 processPackage :: Maybe ProjectContext -> AddOptions -> Either Error Text -> Text -> IO (Either Error Text)

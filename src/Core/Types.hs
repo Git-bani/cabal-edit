@@ -47,6 +47,7 @@ module Core.Types
     -- * Results
   , Error(..)
   , ErrorCode(..)
+  , PackageMetadata(..)
   ) where
 
 import Data.Text (Text)
@@ -302,3 +303,11 @@ data ErrorCode
   | FileModificationError
   | SecurityError
   deriving (Show, Eq, Enum, Generic, NFData)
+
+data PackageMetadata = PackageMetadata
+  { pmName :: Text
+  , pmSynopsis :: Text
+  , pmLatestVersion :: Text
+  , pmDownloads :: Maybe Int
+  , pmLicense :: Maybe Text
+  } deriving (Show, Eq, Generic, NFData)

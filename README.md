@@ -34,6 +34,7 @@ cabal-edit add text
 cabal-edit add aeson --version "^>= 2.0"
 
 # Interactive Search: search Hackage and select packages
+# Shows rich metadata (descriptions, synopses) directly in the terminal
 cabal-edit add -i json
 
 # Rename/Alias a dependency (Mixins)

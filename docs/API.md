@@ -102,6 +102,20 @@ Strongly typed package name with validation. Created via `mkPackageName` (for us
 newtype PackageName = PackageName Text
 ```
 
+### `PackageMetadata`
+
+Rich metadata for a package, fetched from Hackage.
+
+```haskell
+data PackageMetadata = PackageMetadata
+  { pmName :: Text
+  , pmSynopsis :: Text
+  , pmLatestVersion :: Text
+  , pmDownloads :: Maybe Int
+  , pmLicense :: Maybe Text
+  }
+```
+
 ## Configuration
 
 ```json

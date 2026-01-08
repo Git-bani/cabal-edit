@@ -33,7 +33,15 @@ If you are unsure of the exact package name, or want to explore Hackage, use the
 cabal-edit add -i json
 ```
 
-This searches Hackage for "json" and presents a selectable list of matching packages.
+This searches Hackage for "json" and presents a selectable list of matching packages with their synopses:
+
+```text
+Select packages to add:
+(Use arrow keys to move, Space to toggle, Enter to confirm)
+> [x] aeson                     - Fast JSON parsing and encoding
+  [ ] lens-aeson                - Law-abiding Lenses for aeson
+  [ ] yaml                      - Support for parsing and rendering YAML documents.
+```
 
 **Renaming Dependencies (Mixins):**
 

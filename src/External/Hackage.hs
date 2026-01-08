@@ -4,6 +4,7 @@ module External.Hackage
   ( fetchPackageVersions
   , fetchLatestVersion
   , searchPackages
+  , fetchPackageMetadata
   ) where
 
 import Core.Types
@@ -17,29 +18,68 @@ import System.Directory (getHomeDirectory, createDirectoryIfMissing, doesFileExi
 import System.FilePath ((</>))
 import Data.Time (getCurrentTime, diffUTCTime)
 import Text.Read (readMaybe)
-import Data.Maybe (mapMaybe)
-import Data.Aeson (FromJSON(..), (.:), withObject)
+import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Aeson (FromJSON(..), (.:), (.:?), withObject)
 
 -- | Search for packages on Hackage by keyword
--- Uses Hackage search API: GET /packages/search?terms={query}
-searchPackages :: Text -> IO (Either Error [Text])
+searchPackages :: Text -> IO (Either Error [PackageMetadata])
 searchPackages query = do
   cfg <- loadConfig
   let url = cfgHackageUrl cfg <> "/packages/search?terms=" <> query
-  -- The search API returns a JSON array of objects with "name" field
-  -- but we can also use simpler HTML search or check if there's a better JSON endpoint.
-  -- Actually Hackage has: GET /packages/search?terms=... which returns JSON if Accept: application/json
-  -- format: [{"name":"pkg1", ...}, ...]
   
   result <- httpGetJSON url :: IO (Either Error [HackageSearchResult])
   case result of
     Left err -> return $ Left err
-    Right searchResults -> return $ Right $ map hsrName searchResults
+    Right searchResults -> do
+      -- To be efficient, we return what we can from search results
+      -- then fetch detail only if needed, but for 'add -i' we want synopsis at least.
+      -- Hackage search results sometimes have synopsis.
+      return $ Right $ map (\r -> PackageMetadata 
+        { pmName = hsrName r
+        , pmSynopsis = fromMaybe "" (hsrSynopsis r)
+        , pmLatestVersion = "" -- Not always in search
+        , pmDownloads = Nothing
+        , pmLicense = Nothing
+        }) searchResults
 
-data HackageSearchResult = HackageSearchResult { hsrName :: Text }
+data HackageSearchResult = HackageSearchResult 
+  { hsrName :: Text 
+  , hsrSynopsis :: Maybe Text
+  }
 
 instance FromJSON HackageSearchResult where
-  parseJSON = withObject "HackageSearchResult" $ \v -> HackageSearchResult <$> v .: "name"
+  parseJSON = withObject "HackageSearchResult" $ \v -> HackageSearchResult 
+    <$> v .: "name"
+    <*> v .:? "synopsis"
+
+-- | Fetch detailed metadata for a package
+fetchPackageMetadata :: Text -> IO (Either Error PackageMetadata)
+fetchPackageMetadata pkgName = do
+  cfg <- loadConfig
+  let url = cfgHackageUrl cfg <> "/package/" <> pkgName <> ".json"
+  -- Hackage .json endpoint for package details
+  result <- httpGetJSON url :: IO (Either Error HackagePackageDetail)
+  case result of
+    Left err -> return $ Left err
+    Right detail -> return $ Right $ PackageMetadata
+      { pmName = pkgName
+      , pmSynopsis = hpdSynopsis detail
+      , pmLatestVersion = hpdLatestVersion detail
+      , pmDownloads = Nothing -- Need separate API for downloads usually
+      , pmLicense = Just (hpdLicense detail)
+      }
+
+data HackagePackageDetail = HackagePackageDetail
+  { hpdSynopsis :: Text
+  , hpdLatestVersion :: Text
+  , hpdLicense :: Text
+  }
+
+instance FromJSON HackagePackageDetail where
+  parseJSON = withObject "HackagePackageDetail" $ \v -> HackagePackageDetail
+    <$> v .: "synopsis"
+    <*> v .: "version"
+    <*> v .: "license"
 
 -- | Fetch latest version of a package
 -- Uses Hackage JSON API: GET /package/{pkg} -> {"1.0.0":"normal", ...}
