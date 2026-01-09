@@ -30,11 +30,15 @@ brew install openssl zlib
 # Add a dependency (resolves latest version from Hackage)
 cabal-edit add text
 
-# Add with explicit version constraint
-cabal-edit add aeson --version "^>= 2.0"
+# Use specific versioning strategies (caret, pvp, exact, wildcard, none)
+cabal-edit add text --strategy wildcard  # text == 1.2.*
+cabal-edit add text --strategy exact     # text == 1.2.4.0
+
+# Solver Dry-Run: verify changes with Cabal's solver before writing
+cabal-edit add aeson --verify --dry-run
 
 # Interactive Search: search Hackage and select packages
-# Shows rich metadata (descriptions, synopses) directly in the terminal
+# Shows rich metadata (versions, licenses, synopses) directly in the terminal
 cabal-edit add -i json
 
 # Rename/Alias a dependency (Mixins)
@@ -63,6 +67,9 @@ cabal-edit add lens --dry-run
 # Remove a dependency
 cabal-edit rm old-package
 
+# Verify removal doesn't break dependency resolution
+cabal-edit rm base --verify
+
 # Interactive mode (visually select dependencies to remove)
 cabal-edit rm -i
 
@@ -83,6 +90,9 @@ cabal-edit list
 # Upgrade all dependencies to latest versions
 cabal-edit upgrade
 
+# Verify upgrades with the solver before applying
+cabal-edit upgrade --verify
+
 # Interactive mode (select which packages to upgrade)
 cabal-edit upgrade -i
 
@@ -91,6 +101,27 @@ cabal-edit upgrade --dry-run
 
 # Upgrade a specific package
 cabal-edit upgrade aeson
+```
+
+### Workspace Management
+
+`cabal-edit` supports multi-package workspaces defined in `cabal.project`.
+
+```bash
+# Workspace Sync: Align dependency versions across all workspace members
+cabal-edit sync
+
+# Sync all shared dependencies to their latest versions from Hackage
+cabal-edit sync --latest
+
+# Apply command to all packages in the workspace
+cabal-edit -w add lens
+
+# Upgrade everything in the workspace
+cabal-edit -w upgrade
+
+# Target specific packages in the workspace
+cabal-edit -p my-pkg1 -p my-pkg2 upgrade
 ```
 
 ### Version Management
@@ -130,21 +161,6 @@ cabal-edit add aeson --verbose
 cabal-edit --version
 ```
 
-### Workspace Support
-
-`cabal-edit` supports multi-package workspaces defined in `cabal.project`.
-
-```bash
-# Apply command to all packages in the workspace
-cabal-edit -w add lens
-
-# Upgrade everything in the workspace
-cabal-edit -w upgrade
-
-# Target specific packages in the workspace
-cabal-edit -p my-pkg1 -p my-pkg2 upgrade
-```
-
 ## How it Works
 
 `cabal-edit` differentiates itself from other tools by its **lossless editing architecture**:
@@ -174,22 +190,13 @@ Powered by a highly optimized AST engine, `cabal-edit` performs complex operatio
 - **Processing Time**: ~27ms for a full parse-edit-write cycle on a 5,000-dependency file.
 - **Complexity**: Linear $O(N)$ scaling.
 
-## Research & Evaluation Benchmarks
-
-Beyond core performance, `cabal-edit` supports specialized benchmarks for evaluating deep research and LLM-based dependency management tasks.
-
-| Benchmark | Focus | Target Metrics |
-|-----------|-------|----------------|
-| **SimpleQA** | Fact-based dependency queries | Accuracy, Hallucination rate |
-| **BrowseComp** | Multi-package workspace analysis | Synthesis quality, Speed |
-
-These benchmarks utilize Gemini Flash via OpenRouter to evaluate the tool's effectiveness in automated environments.
-
 ### Safety Guarantees
 - **Total Functions**: The core logic is implemented using 100% total functions, eliminating runtime crashes due to partiality (no `head`, `tail`, `undefined`).
 - **Exception-Free**: All IO operations and file handling are wrapped in the `Result` ADT. The library does not throw runtime exceptions, ensuring stability for callers.
 - **Type Safety**: Strong internal types and smart constructors (`PackageName`, `VersionConstraint`) prevent invalid states from ever being represented.
-- **Verification**: Every build passes **115+ property-based tests** (via `Hedgehog` & `QuickCheck`) ensuring semantic identity across Add/Remove cycles.
+- **Verification**: Every build passes **125+ property-based tests** (via `Hedgehog` & `QuickCheck`) ensuring semantic identity across Add/Remove cycles.
+- **Solver Dry-Runs**: Use `--verify` to run `cabal build --dry-run` against proposed changes before committing them.
+- **Freeze File Awareness**: Automatically warns you if `cabal.project.freeze` is present, preventing silent overrides of your changes.
 
 ## Supported GHC Versions
 
@@ -204,8 +211,10 @@ These benchmarks utilize Gemini Flash via OpenRouter to evaluate the tool's effe
 
 - ✅ **Industrial-Grade Core**: Powered by a lossless AST engine that captures every detail of your source file.
 - ✅ **Surgical Editing**: Guaranteed byte-for-byte fidelity for all unmodified parts. Preserves all comments, indentation, and structure.
+- ✅ **Solver Integration**: Validate changes with `cabal build --dry-run` using the `--verify` flag.
+- ✅ **Workspace Sync**: Align dependency versions across multi-package projects with `cabal-edit sync`.
 - ✅ **Smart Add**: Resolves latest versions from Hackage automatically (with offline fallback).
-- ✅ **Interactive Search**: Search Hackage and select packages to add from a TUI list.
+- ✅ **Interactive Search**: Search Hackage and select packages to add from a TUI list with rich metadata (License, Version).
 - ✅ **Renaming Support**: Add dependencies with aliases (Mixins) using `--mixin` (e.g. `hiding (Prelude)`).
 - ✅ **Bulk Upgrade**: Upgrade dependencies with intelligent version resolution.
 - ✅ **Flag Dashboard**: Visual TUI to toggle Cabal flags interactively.
@@ -217,6 +226,7 @@ These benchmarks utilize Gemini Flash via OpenRouter to evaluate the tool's effe
 - ✅ **Advanced Safety**: 
     - **Atomic Writes**: Uses temporary files and atomic moves to prevent file corruption.
     - **In-memory Verification**: Validates Cabal file syntax before committing changes.
+    - **Freeze File Awareness**: Detects and warns about potentially conflicting freeze files.
     - **TTY Detection**: Clean output in non-terminal environments (no junk characters).
 
 ## Development

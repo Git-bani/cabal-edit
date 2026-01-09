@@ -33,14 +33,35 @@ If you are unsure of the exact package name, or want to explore Hackage, use the
 cabal-edit add -i json
 ```
 
-This searches Hackage for "json" and presents a selectable list of matching packages with their synopses:
+This searches Hackage for "json" and presents a selectable list of matching packages with rich metadata including **latest versions** and **licenses**:
 
 ```text
 Select packages to add:
 (Use arrow keys to move, Space to toggle, Enter to confirm)
-> [x] aeson                     - Fast JSON parsing and encoding
-  [ ] lens-aeson                - Law-abiding Lenses for aeson
-  [ ] yaml                      - Support for parsing and rendering YAML documents.
+> [x] aeson           2.1.2.1 [BSD-3-Clause] - Fast JSON parsing and encoding
+  [ ] lens-aeson      1.2.2   [MIT]          - Law-abiding Lenses for aeson
+  [ ] yaml            0.11.11 [BSD-3-Clause] - Support for parsing and rendering YAML documents.
+```
+
+**Versioning Strategies:**
+
+By default, `cabal-edit` uses the `caret` operator (`^>=`) for new dependencies. You can choose different strategies using the `--strategy` (`-S`) flag:
+
+```bash
+# Default (^>= 1.2.3)
+cabal-edit add text --strategy caret
+
+# Strict PVP (>= 1.2.3 && < 1.3)
+cabal-edit add text --strategy pvp
+
+# Exact version (== 1.2.3.0)
+cabal-edit add text --strategy exact
+
+# Wildcard (1.2.*)
+cabal-edit add text --strategy wildcard
+
+# No constraint (any)
+cabal-edit add text --strategy none
 ```
 
 **Renaming Dependencies (Mixins):**
@@ -91,6 +112,24 @@ cabal-edit add lens --flag use-lens
 ```
 
 If the conditional block doesn't exist within the targeted section, `cabal-edit` will create it for you at the end of that section.
+
+**Solver Verification:**
+
+To ensure that your changes don't break dependency resolution, use the `--verify` flag. `cabal-edit` will run the Cabal solver (`cabal build --dry-run`) against your proposed changes:
+
+```bash
+# Verify changes before writing
+cabal-edit add aeson --verify
+
+# Combine with dry-run to preview results of a solver check
+cabal-edit add aeson --verify --dry-run
+```
+
+If the solver fails (e.g., due to a version conflict), `cabal-edit` will display the error and refuse to modify your file.
+
+**Freeze File Awareness:**
+
+If your workspace contains a `cabal.project.freeze` file, `cabal-edit` will automatically detect it and warn you when adding or upgrading dependencies. Since freeze files pin specific versions, they may silently override your `.cabal` changes unless updated.
 
 ### 2. Removing a Dependency
 
@@ -195,9 +234,26 @@ To prevent file corruption during power failures or crashes, `cabal-edit` writes
 
 If a `package.yaml` file is present, `cabal-edit` will automatically prioritize it. Commands like `add` and `rm` will modify your `package.yaml` instead of the `.cabal` file, ensuring that your changes aren't lost the next time Hpack generates the Cabal file.
 
-## Workspace Support
+## Workspace Management
 
 Manage multiple packages in a `cabal.project` workspace:
+
+### Workspace Sync
+
+The `sync` command ensures that dependency versions are consistent across all packages in your workspace.
+
+```bash
+# Align all shared dependencies to the highest version used in the workspace
+cabal-edit sync
+
+# Sync all shared dependencies to their latest versions on Hackage
+cabal-edit sync --latest
+
+# Preview sync changes without applying
+cabal-edit sync --dry-run
+```
+
+### Bulk Operations
 
 ```bash
 # Add a dependency to ALL packages in the workspace
