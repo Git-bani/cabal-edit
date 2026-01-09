@@ -32,6 +32,7 @@ spec = describe "Business.Upgrade" $ do
       let opts = UpgradeOptions 
             { uoDryRun = True
             , uoInteractive = False
+            , uoCheck = False
             , uoPackageNames = ["base"]
             }
       
@@ -49,6 +50,7 @@ spec = describe "Business.Upgrade" $ do
       let opts = UpgradeOptions 
             { uoDryRun = False
             , uoInteractive = False
+            , uoCheck = False
             , uoPackageNames = ["non-existent-package-at-least-we-hope"]
             }
       result <- upgradeDependencies opts path

@@ -25,6 +25,7 @@ spec = describe "Business.SourceDep" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+            , aoCheck = False
           , aoInteractive = False
             , aoGit = Just "https://github.com/example/foo"
             , aoTag = Just "v1.0"
@@ -65,6 +66,7 @@ spec = describe "Business.SourceDep" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+            , aoCheck = False
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing

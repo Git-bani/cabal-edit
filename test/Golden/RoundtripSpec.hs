@@ -37,7 +37,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoSection = TargetLib
               , aoCondition = Nothing, aoFlag = Nothing
               , aoDev = False
-              , aoDryRun = False
+              , aoDryRun = False, aoCheck = False
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing, aoMixin = Nothing
@@ -50,7 +50,7 @@ spec = describe "Golden Roundtrip" $ do
         let rmOpts = RemoveOptions
               { roPackageNames = ["cabal-edit-unique-dep"]
               , roSection = TargetLib
-              , roDryRun = False, roInteractive = False
+              , roDryRun = False, roCheck = False, roInteractive = False
               }
               
         resRm <- removeDependency rmOpts path
@@ -68,7 +68,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoSection = TargetLib
               , aoCondition = Nothing, aoFlag = Nothing
               , aoDev = False
-              , aoDryRun = False
+              , aoDryRun = False, aoCheck = False
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing, aoMixin = Nothing
@@ -102,10 +102,10 @@ spec = describe "Golden Roundtrip" $ do
         let ast0 = parseAST content0
         let deps0 = sort $ map (\(_,_,d) -> unPackageName $ depName d) $ findDependenciesInAST ast0
 
-        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoMixin = Nothing, aoInteractive = False }
+        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoCheck = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoMixin = Nothing, aoInteractive = False }
         _ <- addDependency Nothing addOpts path
         
-        let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roInteractive = False }
+        let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roCheck = False, roInteractive = False }
         _ <- removeDependency rmOpts path
         
         -- Get final deps

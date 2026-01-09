@@ -105,9 +105,11 @@ test-suite cabal-edit-test
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
     other-modules:    Core.SafetySpec
+                    , Core.SolverSpec
                     , Core.DependencyResolverSpec
                     , Core.UnicodeSpec
                     , Business.AddSpec
+                    , Business.AddOutlierSpec
                     , Business.RemoveSpec
                     , Business.ValidationSpec
                     , Business.SetVersionSpec

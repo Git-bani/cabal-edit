@@ -25,6 +25,7 @@ spec = describe "Common Stanza Support" $ do
             , aoCondition = Nothing, aoFlag = Nothing
             , aoDev = False
             , aoDryRun = False
+            , aoCheck = False
           , aoInteractive = False
             , aoGit = Nothing
             , aoTag = Nothing
