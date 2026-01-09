@@ -4,13 +4,13 @@ module Core.SolverSpec (spec) where
 
 import Test.Hspec
 import Core.Solver (verifyChanges)
-import Core.Types (Error(..))
+
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.Directory (getCurrentDirectory, removeFile, doesFileExist)
+import System.Directory (getCurrentDirectory, removeFile)
 import System.FilePath ((</>))
 import Control.Exception (bracket, catch, IOException)
-import Data.Either (isLeft)
+
 
 spec :: Spec
 spec = describe "Core.Solver" $ do
@@ -23,7 +23,7 @@ spec = describe "Core.Solver" $ do
       -- The solver check should fail because \"badContent\" is invalid syntax
       -- or because it can't find dependencies (since it's garbage)
       -- or simply because 'cabal build' returns non-zero.
-      result <- verifyChanges path badContent
+      _ <- verifyChanges path badContent
       
       -- It might fail or succeed depending on how robust 'cabal build --dry-run' is 
       -- against total garbage, but usually it fails.
