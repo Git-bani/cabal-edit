@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import System.IO (hSetBuffering, hSetEcho, stdin, BufferMode(..), stdout, hFlush)
 import System.Console.ANSI
 import Control.Monad (forM_)
+import Data.Maybe (fromMaybe)
 
 -- | Select multiple items from a list (starts all True)
 selectItems :: Text -> [Text] -> IO [Text]
@@ -48,16 +49,23 @@ packageLoop cursor states packages = do
     let checkbox = if state then "[x] " else "[ ] "
     setSGR [SetColor Foreground Vivid (if idx == cursor then Cyan else White)]
     putStr $ prefix <> checkbox <> T.unpack (T.justifyLeft 25 ' ' (pmName pkg))
+    
+    -- Version column
+    setSGR [SetColor Foreground Dull Yellow]
+    putStr $ " " <> T.unpack (T.justifyLeft 12 ' ' (pmLatestVersion pkg))
+    
+    -- License column
+    setSGR [SetColor Foreground Dull Green]
+    putStr $ " [" <> T.unpack (T.justifyLeft 10 ' ' (fromMaybe "Unknown" (pmLicense pkg))) <> "]"
+    
+    -- Synopsis (truncated)
     setSGR [SetColor Foreground Dull White]
-    putStr $ " - " <> T.unpack (T.take 50 (pmSynopsis pkg))
+    putStr $ " - " <> T.unpack (T.take 40 (pmSynopsis pkg))
+    
     clearLine
     putStr "\n"
     setSGR [Reset]
   
-  -- Draw Detail pane if needed
-  -- setCursorPosition (cursor) 80
-  -- putStr "DETAILS..."
-
   hFlush stdout
   cursorUp (length packages)
   c <- getChar
@@ -76,6 +84,7 @@ packageLoop cursor states packages = do
           _ -> packageLoop cursor states packages
       else packageLoop cursor states packages
     _ -> packageLoop cursor states packages
+
 
 -- | Dashboard to toggle boolean states of items (starts with current states)
 toggleDashboard :: Text -> [(Text, Bool)] -> IO [(Text, Bool)]

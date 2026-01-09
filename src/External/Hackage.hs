@@ -10,10 +10,12 @@ module External.Hackage
 import Core.Types
 import External.Network
 import Utils.Config (loadConfig, Config(..))
+import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map as Map
 import Data.Map (Map)
+import Control.Concurrent.Async (mapConcurrently)
 import System.Directory (getHomeDirectory, createDirectoryIfMissing, doesFileExist, getModificationTime)
 import System.FilePath ((</>))
 import Data.Time (getCurrentTime, diffUTCTime)
@@ -31,16 +33,24 @@ searchPackages query = do
   case result of
     Left err -> return $ Left err
     Right searchResults -> do
-      -- To be efficient, we return what we can from search results
-      -- then fetch detail only if needed, but for 'add -i' we want synopsis at least.
-      -- Hackage search results sometimes have synopsis.
-      return $ Right $ map (\r -> PackageMetadata 
-        { pmName = hsrName r
-        , pmSynopsis = fromMaybe "" (hsrSynopsis r)
-        , pmLatestVersion = "" -- Not always in search
-        , pmDownloads = Nothing
-        , pmLicense = Nothing
-        }) searchResults
+      -- Fetch detail only for the top 10 results to keep it fast
+      let topResults = take 10 searchResults
+      logInfo $ "Fetching metadata for top " <> T.pack (show (length topResults)) <> " results..."
+      
+      details <- mapConcurrently (fetchPackageMetadata . hsrName) topResults
+      
+      -- Combine search results with their details if available
+      let combined = zipWith (\sr detRes -> case detRes of
+                                              Right detail -> detail
+                                              Left _ -> PackageMetadata 
+                                                { pmName = hsrName sr
+                                                , pmSynopsis = fromMaybe "" (hsrSynopsis sr)
+                                                , pmLatestVersion = ""
+                                                , pmDownloads = Nothing
+                                                , pmLicense = Nothing
+                                                }) topResults details
+      return $ Right combined
+
 
 data HackageSearchResult = HackageSearchResult 
   { hsrName :: Text 
