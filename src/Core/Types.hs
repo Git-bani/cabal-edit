@@ -39,6 +39,7 @@ module Core.Types
   , AddOptions(..)
   , RemoveOptions(..)
   , UpgradeOptions(..)
+  , SyncOptions(..)
   , SetVersionOptions(..)
   , FlagOptions(..)
   , FlagOperation(..)
@@ -201,15 +202,15 @@ data VersionConstraint
   | RangeVersion VersionRange
   | UnparsedVersion Text
   | CabalVersionRange VR.VersionRange
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Ord, Generic, NFData)
 
 data VersionRange = VersionRange
   { lowerBound :: Maybe (Version, BoundType)
   , upperBound :: Maybe (Version, BoundType)
-  } deriving (Show, Eq, Generic, NFData)
+  } deriving (Show, Eq, Ord, Generic, NFData)
 
 data BoundType = Inclusive | Exclusive
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Ord, Generic, NFData)
 
 data Version = Version [Int] 
   deriving (Eq, Ord, Show, Generic, NFData)
@@ -230,7 +231,14 @@ data Command
   | SetVersionCmd SetVersionOptions
   | FlagCmd FlagOptions
   | ListCmd ListOptions
+  | SyncCmd SyncOptions
   deriving stock (Show, Eq, Generic)
+    deriving anyclass (NFData)
+
+data SyncOptions = SyncOptions
+  { soDryRun :: Bool
+  , soLatest :: Bool -- If true, also fetch latest from Hackage for all shared deps
+  } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)
 
 data ListOptions = ListOptions

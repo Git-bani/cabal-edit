@@ -13,6 +13,7 @@ import Business.Upgrade
 import Business.SetVersion
 import Business.Flag
 import Business.List
+import Business.Sync
 import Core.Types
 import Core.ProjectContext
 import Utils.Logging
@@ -85,6 +86,19 @@ commandParser = subparser
   <> command "set-version" (info setVersionParser (progDesc "Set package version"))
   <> command "flag" (info flagParser (progDesc "Manage Cabal flags"))
   <> command "list" (info listParser (progDesc "List dependencies"))
+  <> command "sync" (info syncParser (progDesc "Sync dependency versions across workspace"))
+  )
+
+syncParser :: Parser Command
+syncParser = SyncCmd <$>
+  ( SyncOptions
+  <$> switch
+      ( long "dry-run"
+      <> help "Don't write changes" )
+  <*> switch
+      ( long "latest"
+      <> short 'u'
+      <> help "Sync all shared dependencies to their latest versions from Hackage" )
   )
 
 listParser :: Parser Command
@@ -256,52 +270,62 @@ executeCommand (CLI verbose quiet workspace packages cmd) = do
     
   when verbose $ logDebug "Verbose mode enabled"
   
-  targetFilesWithCtx <- if workspace || not (null packages)
-    then do
-      logInfo "Scanning workspace for projects..."
+  case cmd of
+    SyncCmd opts -> do
+      logInfo "Syncing workspace dependencies..."
       root <- findProjectRoot
       case root of
-        Nothing -> do
-          if not (null packages)
-            then logError "No cabal.project found, cannot target specific packages!"
-            else logError "No cabal.project found!"
-          return []
+        Nothing -> return $ Left $ Error "No cabal.project found! 'sync' requires a workspace." FileNotFound
         Just r -> do
-          logDebug $ "Found project root: " <> T.pack r
           ctx <- loadProjectContext r
-          let allPkgs = pcPackages ctx
-          if null packages
-            then return $ map ((Just ctx, ) . snd) allPkgs
-            else 
-              let filtered = filter (\(name, _) -> unPackageName name `elem` packages) allPkgs
-                  foundNames = map (unPackageName . fst) filtered
-                  missing = filter (`notElem` foundNames) packages
-              in do
-                forM_ missing $ \m -> logError $ "Package not found in workspace: " <> m
-                return $ map ((Just ctx, ) . snd) filtered
-    else do
-      cwd <- getCurrentDirectory
-      hpackExists <- doesFileExist (cwd </> "package.yaml")
-      if hpackExists
-        then return [(Nothing, "package.yaml")]
+          syncWorkspace opts ctx
+    _ -> do
+      targetFilesWithCtx <- if workspace || not (null packages)
+        then do
+          logInfo "Scanning workspace for projects..."
+          root <- findProjectRoot
+          case root of
+            Nothing -> do
+              if not (null packages)
+                then logError "No cabal.project found, cannot target specific packages!"
+                else logError "No cabal.project found!"
+              return []
+            Just r -> do
+              logDebug $ "Found project root: " <> T.pack r
+              ctx <- loadProjectContext r
+              let allPkgs = pcPackages ctx
+              if null packages
+                then return $ map ((Just ctx, ) . snd) allPkgs
+                else 
+                  let filtered = filter (\(name, _) -> unPackageName name `elem` packages) allPkgs
+                      foundNames = map (unPackageName . fst) filtered
+                      missing = filter (`notElem` foundNames) packages
+                  in do
+                    forM_ missing $ \m -> logError $ "Package not found in workspace: " <> m
+                    return $ map ((Just ctx, ) . snd) filtered
         else do
-          f <- findCabalFile
-          return $ maybe [] (\path -> [(Nothing, path)]) f
+          cwd <- getCurrentDirectory
+          hpackExists <- doesFileExist (cwd </> "package.yaml")
+          if hpackExists
+            then return [(Nothing, "package.yaml")]
+            else do
+              f <- findCabalFile
+              return $ maybe [] (\path -> [(Nothing, path)]) f
 
-  if null targetFilesWithCtx
-    then return $ Left $ Error "No .cabal files found" FileNotFound
-    else do
-      let count = length targetFilesWithCtx
-      when (count > 1) $
-        logInfo $ "Processing " <> T.pack (show count) <> " package(s)..."
-      
-      forM_ targetFilesWithCtx $ \(mCtx, path) -> do
-        res <- runOn mCtx path cmd
-        case res of
-          Left e -> logError $ "Failed on " <> T.pack path <> ": " <> errorMessage e
-          Right _ -> return ()
-      
-      return $ Right ()
+      if null targetFilesWithCtx
+        then return $ Left $ Error "No .cabal files found" FileNotFound
+        else do
+          let count = length targetFilesWithCtx
+          when (count > 1) $
+            logInfo $ "Processing " <> T.pack (show count) <> " package(s)..."
+          
+          forM_ targetFilesWithCtx $ \(mCtx, path) -> do
+            res <- runOn mCtx path cmd
+            case res of
+              Left e -> logError $ "Failed on " <> T.pack path <> ": " <> errorMessage e
+              Right _ -> return ()
+          
+          return $ Right ()
 
 runOn :: Maybe ProjectContext -> FilePath -> Command -> IO (Either Error ())
 runOn maybeCtx path cmd = do
@@ -342,6 +366,7 @@ runOn maybeCtx path cmd = do
               return path -- Will fail parsing
         else return path
       listDependencies opts targetPath
+    SyncCmd _ -> return $ Left $ Error "Sync command must be run at workspace level" InvalidDependency
 
 describeAction :: Command -> Text
 describeAction (AddCmd opts) = "Adding " <> T.intercalate ", " (aoPackageNames opts)
@@ -352,6 +377,7 @@ describeAction (UpgradeCmd opts) =
 describeAction (SetVersionCmd opts) = "Setting version to " <> svoVersion opts
 describeAction (FlagCmd opts) = describeFlagAction opts
 describeAction (ListCmd _) = "Listing dependencies"
+describeAction (SyncCmd _) = "Syncing workspace dependencies"
 
 describeFlagAction :: FlagOptions -> Text
 describeFlagAction opts = 

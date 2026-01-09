@@ -3,6 +3,7 @@
 import Test.Hspec
 
 import qualified Business.AddSpec
+import qualified Business.AddOutlierSpec
 import qualified Business.RemoveSpec
 import qualified Business.UpgradeSpec
 import qualified Business.SubLibrarySpec
@@ -12,7 +13,9 @@ import qualified Business.FlagSpec
 import qualified Business.MixinSpec
 import qualified Business.ListSpec
 import qualified Business.SourceDepSpec
+import qualified Business.SyncSpec
 import qualified Business.CommonStanzaSpec
+import qualified Core.SolverSpec
 import qualified Core.DependencyResolverSpec
 import qualified Core.ProjectContextSpec
 import qualified Core.SafetySpec
@@ -38,6 +41,7 @@ main = hspec $ do
   describe "Core.AST.Editor" Core.AST.EditorSpec.spec
   describe "Core.AST.Editor (Outliers)" Core.AST.EditorOutlierSpec.spec
   describe "Business.Add" Business.AddSpec.spec
+  describe "Business.Add (Outliers)" Business.AddOutlierSpec.spec
   describe "Business.DebugAdd" Business.DebugAddSpec.spec
   describe "Business.Remove" Business.RemoveSpec.spec
   describe "Business.Upgrade" Business.UpgradeSpec.spec
@@ -51,6 +55,8 @@ main = hspec $ do
   describe "Business.List" Business.ListSpec.spec
   describe "Business.SourceDep" Business.SourceDepSpec.spec
   describe "Business.CommonStanza" Business.CommonStanzaSpec.spec
+  describe "Business.Sync" Business.SyncSpec.spec
+  describe "Core.Solver" Core.SolverSpec.spec
   describe "Core.DependencyResolver" Core.DependencyResolverSpec.spec
   describe "Core.ProjectContext" Core.ProjectContextSpec.spec
   describe "Core.Safety" Core.SafetySpec.spec
