@@ -18,8 +18,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
-import Data.Maybe (maybeToList)
+import Data.Maybe (isJust, isNothing, mapMaybe)
 
+import Utils.Formatting (describeTarget)
 import Utils.Diff (diffLines, colorizeDiff)
 
 addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Either Error ())
@@ -159,14 +160,6 @@ parseRenaming t =
            renames = mapMaybe parseRename parts
        in if null renames then DefaultRenaming else Renaming renames
 
-mapMaybe :: (a -> Maybe b) -> [a] -> [b]
-mapMaybe _ [] = []
-mapMaybe f (x:xs) = case f x of
-                      Just y -> y : mapMaybe f xs
-                      Nothing -> mapMaybe f xs
-
-
-
 handleSourceDependency :: AddOptions -> IO (Either Error ())
 handleSourceDependency opts
   | aoDryRun opts = return $ Right () -- Skip project mod in dry-run for now
@@ -179,21 +172,4 @@ handleSourceDependency opts
       logInfo $ "Adding local dependency to " <> T.pack projPath
       addLocalPackage projPath localPath
   | otherwise = return $ Right ()
-
-isJust :: Maybe a -> Bool
-isJust (Just _) = True
-isJust Nothing  = False
-
-isNothing :: Maybe a -> Bool
-isNothing Nothing = True
-isNothing _       = False
-
-describeTarget :: SectionTarget -> Text
-describeTarget TargetLib = "library"
-describeTarget (TargetNamed n) = n 
-describeTarget (TargetExe mn) = T.unwords $ ["executable"] ++ maybeToList mn
-describeTarget (TargetTest mn) = T.unwords $ ["test-suite"] ++ maybeToList mn
-describeTarget (TargetBench mn) = T.unwords $ ["benchmark"] ++ maybeToList mn
-describeTarget (TargetCommon mn) = T.unwords $ ["common"] ++ maybeToList mn
-describeTarget (TargetConditional base _) = describeTarget base
 

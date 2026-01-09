@@ -13,8 +13,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Control.Monad (foldM)
-import Data.Maybe (maybeToList)
 
+import Utils.Formatting (describeTarget)
 import Utils.Terminal (selectItems)
 import Utils.Diff (diffLines, colorizeDiff)
 import Data.List (nub)
@@ -100,12 +100,3 @@ applyRemoval pkgName (Right content) target =
   in case removeDependencyFromAST targetName condition (unPackageName pkgName) ast of
        Left err -> Left err
        Right updatedAST -> Right $ serializeAST updatedAST
-
-describeTarget :: SectionTarget -> Text
-describeTarget TargetLib = "library"
-describeTarget (TargetNamed n) = n 
-describeTarget (TargetExe mn) = T.unwords $ ["executable"] ++ maybeToList mn
-describeTarget (TargetTest mn) = T.unwords $ ["test-suite"] ++ maybeToList mn
-describeTarget (TargetBench mn) = T.unwords $ ["benchmark"] ++ maybeToList mn
-describeTarget (TargetCommon mn) = T.unwords $ ["common"] ++ maybeToList mn
-describeTarget (TargetConditional base _) = describeTarget base

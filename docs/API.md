@@ -12,14 +12,16 @@
 - **AST/Serializer.hs**: Converts the AST back to text, guaranteeing byte-for-byte fidelity for unmodified parts.
 - **AST/Editor.hs**: Performs high-level manipulations (add/remove/update) directly on the AST.
 - **HpackEditor.hs**: Provides surgical editing for `package.yaml` (Hpack) files.
-- **DependencyResolver.hs**: Logic for resolving versions against Hackage.
-- **ProjectContext.hs**: Handles workspace logic (`cabal.project` parsing).
+- **DependencyResolver.hs**: Logic for resolving versions against Hackage and Stackage.
+- **ProjectContext.hs**: Handles workspace logic and detects `cabal.project.freeze` files.
+- **Solver.hs**: Integration with `cabal build --dry-run` for change verification.
 - **Safety.hs**: Provides atomic file writes and syntax verification mechanisms.
 
 ### Business Layer (`src/Business/`)
 
 - **Add.hs**: Implements the logic for adding dependencies.
 - **Remove.hs**: Implements logic for removing dependencies.
+- **Sync.hs**: Aligns dependency versions across a workspace.
 - **Hpack.hs**: Specialized business logic for Hpack-based projects.
 - **Upgrade.hs**: Implements dependency upgrade workflows.
 - **SetVersion.hs**: Logic for updating package version.
@@ -113,6 +115,30 @@ data PackageMetadata = PackageMetadata
   , pmLatestVersion :: Text
   , pmDownloads :: Maybe Int
   , pmLicense :: Maybe Text
+  }
+```
+
+### `VersioningStrategy`
+
+Defines how new dependency versions are constrained.
+
+```haskell
+data VersioningStrategy
+  = StrategyCaret    -- ^>= 1.2.3 (Default)
+  | StrategyPVP      -- >= 1.2.3 && < 1.3
+  | StrategyExact    -- == 1.2.3.4
+  | StrategyWildcard -- 1.2.*
+  | StrategyNone     -- any
+```
+
+### `SyncOptions`
+
+Configuration for the workspace synchronization command.
+
+```haskell
+data SyncOptions = SyncOptions
+  { soDryRun :: Bool
+  , soLatest :: Bool -- If true, fetch latest from Hackage for all shared deps
   }
 ```
 

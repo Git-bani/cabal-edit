@@ -442,7 +442,6 @@ addNewDep dep fl =
   let val = fieldValue fl
       ls = splitPreservingLineEndings val
       baseIndent = fieldIndent fl
-      -- Use a real newline if the field terminator is empty (EOF case)
       term = if T.null (fieldLineEnding fl) then "\n" else fieldLineEnding fl
   in case ls of
     [(s, _)] -> 
@@ -455,49 +454,50 @@ addNewDep dep fl =
       let depStr = formatDependency dep
       in fl { fieldValue = " " <> depStr }
     ((firstLine, _):restLines) ->
-      let nonCommentRest = filter (not . T.isPrefixOf "--" . T.stripStart . fst) restLines
-          style = if any (T.isPrefixOf "," . T.stripStart . fst) nonCommentRest then Leading else Trailing
-          indent = detectCommonIndent baseIndent firstLine (map fst restLines)
+      let (style, indent) = detectDependencyStyle baseIndent firstLine (map fst restLines)
           isLeading = case style of { Leading -> True; Trailing -> False }
-          actualIndent = if indent <= baseIndent 
-                         then baseIndent + 4 
-                         else indent
           
           val' = if not isLeading 
                  then ensureTrailingComma val 
                  else val
           
           depStr = if isLeading 
-                   then T.replicate actualIndent " " <> ", " <> formatDependency dep
-                   else T.replicate actualIndent " " <> formatDependency dep
+                   then T.replicate indent " " <> ", " <> formatDependency dep
+                   else T.replicate indent " " <> formatDependency dep
 
-          -- Find the last non-empty, non-comment line to append after
-          ls' = splitPreservingLineEndings val'
-          isRelevant (l, _) = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
-          lastIdx = case findIndex isRelevant (reverse ls') of
-                      Just i -> length ls' - 1 - i
-                      Nothing -> length ls' - 1
-          
-          (pre, post) = splitAt (lastIdx + 1) ls'
-          
-          -- To append on a new line, we must ensure the line we append after has a terminator.
-          -- We also want to preserve the last terminator of the field value (e.g. if it was empty).
-          lastTerm = case reverse pre of
-                       ((_, t):_) -> t
-                       [] -> term
-              
-          actualLastTerm = if T.null lastTerm then term else lastTerm
-          newTerm = if T.null lastTerm then "" else actualLastTerm
-              
-          -- Update the terminator of the last line in 'pre'
-          updateLastTerm [] = []
-          updateLastTerm [(l, _)] = [(l, actualLastTerm)]
-          updateLastTerm (x:xs) = x : updateLastTerm xs
-              
-          preUpdated = updateLastTerm pre
-              
-          newVal = T.concat (map (uncurry (<>)) preUpdated) <> depStr <> newTerm <> T.concat (map (uncurry (<>)) post)
+          newVal = insertOnNewLine val' depStr term
       in fl { fieldValue = newVal }
+
+-- | Detect indentation style and amount for multiline fields
+detectDependencyStyle :: Int -> Text -> [Text] -> (Style, Int)
+detectDependencyStyle baseIndent firstLine restLines =
+  let nonCommentRest = filter (not . T.isPrefixOf "--" . T.stripStart) restLines
+      style = if any (T.isPrefixOf "," . T.stripStart) nonCommentRest then Leading else Trailing
+      indent = detectCommonIndent baseIndent firstLine restLines
+      actualIndent = if indent <= baseIndent 
+                     then baseIndent + 4 
+                     else indent
+  in (style, actualIndent)
+
+-- | Insert a new string on a new line after the last relevant content line
+insertOnNewLine :: Text -> Text -> Text -> Text
+insertOnNewLine val content term =
+  let ls = splitPreservingLineEndings val
+      isRelevant (l, _) = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
+      lastIdx = case findIndex isRelevant (reverse ls) of
+                  Just i -> length ls - 1 - i
+                  Nothing -> length ls - 1
+      
+      (pre, post) = splitAt (lastIdx + 1) ls
+      
+      -- Update the terminator of the last line in 'pre' to ensure content is on a new line
+      updateLastTerm [] = []
+      updateLastTerm [(l, t)] = [(l, if T.null t then term else t)]
+      updateLastTerm (x:xs) = x : updateLastTerm xs
+      
+      preUpdated = updateLastTerm pre
+                  
+  in T.concat (map (uncurry (<>)) preUpdated) <> content <> T.concat (map (uncurry (<>)) post)
 
 ensureTrailingComma :: Text -> Text
 ensureTrailingComma t = 
@@ -701,8 +701,6 @@ updateSpecificLineForMixin pkgName mixin line =
 
 addNewMixin :: Mixin -> FieldLine -> FieldLine
 addNewMixin mixin fl = 
-  -- Reuse addNewDep logic pattern but for mixin format
-  -- Duplicate logic for now to avoid refactoring dependency specific stuff
   let val = fieldValue fl
       ls = splitPreservingLineEndings val
       baseIndent = fieldIndent fl
@@ -718,39 +716,16 @@ addNewMixin mixin fl =
       let mixStr = formatMixin mixin
       in fl { fieldValue = " " <> mixStr }
     ((firstLine, _):restLines) ->
-      let nonCommentRest = filter (not . T.isPrefixOf "--" . T.stripStart . fst) restLines
-          style = if any (T.isPrefixOf "," . T.stripStart . fst) nonCommentRest then Leading else Trailing
-          indent = detectCommonIndent baseIndent firstLine (map fst restLines)
+      let (style, indent) = detectDependencyStyle baseIndent firstLine (map fst restLines)
           isLeading = case style of { Leading -> True; Trailing -> False }
-          actualIndent = if indent <= baseIndent 
-                         then baseIndent + 4 
-                         else indent
           
           val' = if not isLeading 
                  then ensureTrailingComma val 
                  else val
           
           mixStr = if isLeading 
-                   then T.replicate actualIndent " " <> ", " <> formatMixin mixin
-                   else T.replicate actualIndent " " <> formatMixin mixin
+                   then T.replicate indent " " <> ", " <> formatMixin mixin
+                   else T.replicate indent " " <> formatMixin mixin
 
-          ls' = splitPreservingLineEndings val'
-          isRelevant (l, _) = not (T.null (T.strip l)) && not ("--" `T.isPrefixOf` T.stripStart l)
-          lastIdx = case findIndex isRelevant (reverse ls') of
-                      Just i -> length ls' - 1 - i
-                      Nothing -> length ls' - 1
-          
-          (pre, post) = splitAt (lastIdx + 1) ls'
-          lastTerm = case reverse pre of
-                       ((_, t):_) -> t
-                       [] -> term
-          actualLastTerm = if T.null lastTerm then term else lastTerm
-          newTerm = if T.null lastTerm then "" else actualLastTerm
-          
-          updateLastTerm [] = []
-          updateLastTerm [(l, _)] = [(l, actualLastTerm)]
-          updateLastTerm (x:xs) = x : updateLastTerm xs
-          
-          preUpdated = updateLastTerm pre
-          newVal = T.concat (map (uncurry (<>)) preUpdated) <> mixStr <> newTerm <> T.concat (map (uncurry (<>)) post)
+          newVal = insertOnNewLine val' mixStr term
       in fl { fieldValue = newVal }
