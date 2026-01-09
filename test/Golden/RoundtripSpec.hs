@@ -41,7 +41,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing, aoMixin = Nothing
-              , aoInteractive = False
+              , aoInteractive = False, aoStrategy = StrategyCaret
               }        
         resAdd <- addDependency Nothing addOpts path
         resAdd `shouldSatisfy` isRight
@@ -72,7 +72,7 @@ spec = describe "Golden Roundtrip" $ do
               , aoGit = Nothing
               , aoTag = Nothing
               , aoPath = Nothing, aoMixin = Nothing
-              , aoInteractive = False
+              , aoInteractive = False, aoStrategy = StrategyCaret
               }
         -- First add
         _ <- addDependency Nothing addOpts path
@@ -102,7 +102,7 @@ spec = describe "Golden Roundtrip" $ do
         let ast0 = parseAST content0
         let deps0 = sort $ map (\(_,_,d) -> unPackageName $ depName d) $ findDependenciesInAST ast0
 
-        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoCheck = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoMixin = Nothing, aoInteractive = False }
+        let addOpts = AddOptions { aoPackageNames = [pkgName], aoVersion = Just ">=0", aoSection = TargetLib, aoCondition = Nothing, aoFlag = Nothing, aoDev = False, aoDryRun = False, aoCheck = False, aoGit = Nothing, aoTag = Nothing, aoPath = Nothing, aoMixin = Nothing, aoInteractive = False, aoStrategy = StrategyCaret }
         _ <- addDependency Nothing addOpts path
         
         let rmOpts = RemoveOptions { roPackageNames = [pkgName], roSection = TargetLib, roDryRun = False, roCheck = False, roInteractive = False }

@@ -21,6 +21,7 @@ data ProjectContext = ProjectContext
   { pcRoot :: FilePath
   , pcPackageGlobs :: [String]
   , pcPackages :: [(PackageName, FilePath)] -- (Name, Path to .cabal file)
+  , pcHasFreezeFile :: Bool
   } deriving (Show, Eq)
 
 -- | Find the directory containing cabal.project, traversing upwards
@@ -45,12 +46,16 @@ findProjectRoot = do
 loadProjectContext :: FilePath -> IO ProjectContext
 loadProjectContext root = do
   let projFile = root </> "cabal.project"
+  let freezeFile = root </> "cabal.project.freeze"
+  
   content <- TIO.readFile projFile
+  hasFreeze <- doesFileExist freezeFile
+  
   let globs = parseProjectGlobs content
-  let ctxNoPkgs = ProjectContext root globs []
+  let ctxNoPkgs = ProjectContext root globs [] hasFreeze
   paths <- findAllPackageFiles ctxNoPkgs
   pkgs <- mapM extractPackageNameSimple paths
-  return $ ProjectContext root globs [ (name, p) | (p, Right name) <- zip paths pkgs ]
+  return $ ProjectContext root globs [ (name, p) | (p, Right name) <- zip paths pkgs ] hasFreeze
 
 extractPackageNameSimple :: FilePath -> IO (Either Text PackageName)
 extractPackageNameSimple path = do

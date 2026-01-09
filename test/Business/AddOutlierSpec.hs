@@ -100,6 +100,7 @@ defaultAddOptions =
     , aoTag = Nothing
     , aoPath = Nothing
     , aoMixin = Nothing
+    , aoStrategy = StrategyCaret
     , aoPackageNames = []
     }
 

@@ -37,6 +37,7 @@ spec = describe "Core.Unicode" $ do
             , aoDryRun = False
             , aoCheck = False
           , aoInteractive = False
+            , aoStrategy = StrategyCaret
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing, aoMixin = Nothing

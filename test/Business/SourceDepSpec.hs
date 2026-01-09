@@ -27,6 +27,7 @@ spec = describe "Business.SourceDep" $ do
             , aoDryRun = False
             , aoCheck = False
           , aoInteractive = False
+            , aoStrategy = StrategyCaret
             , aoGit = Just "https://github.com/example/foo"
             , aoTag = Just "v1.0"
             , aoPath = Nothing, aoMixin = Nothing
@@ -68,6 +69,7 @@ spec = describe "Business.SourceDep" $ do
             , aoDryRun = False
             , aoCheck = False
           , aoInteractive = False
+            , aoStrategy = StrategyCaret
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Just "../bar"

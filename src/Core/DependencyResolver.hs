@@ -23,8 +23,8 @@ resolveLatestVersion pkgName = fetchLatestVersion (unPackageName pkgName)
 -- If NO constraint is provided:
 --   1. Check if it's a workspace member (if context provided).
 --   2. Otherwise, fetch LATEST from Hackage.
-resolveVersionConstraint :: Maybe ProjectContext -> Maybe Version -> PackageName -> Maybe Text -> IO (Either Error VersionConstraint)
-resolveVersionConstraint maybeCtx mCabalVer pkgName Nothing = do
+resolveVersionConstraint :: Maybe ProjectContext -> Maybe Version -> PackageName -> Maybe Text -> VersioningStrategy -> IO (Either Error VersionConstraint)
+resolveVersionConstraint maybeCtx mCabalVer pkgName Nothing strategy = do
   -- 1. Check Workspace
   let isWorkspaceMember = case maybeCtx of
         Nothing -> False
@@ -37,9 +37,15 @@ resolveVersionConstraint maybeCtx mCabalVer pkgName Nothing = do
       res <- resolveLatestVersion pkgName
       case res of
         Right v -> 
-          if supportsCarets mCabalVer
-          then return $ Right (MajorBoundVersion v)
-          else return $ Right (RangeVersion (computePVPRange v))
+          case strategy of
+            StrategyCaret ->
+              if supportsCarets mCabalVer
+              then return $ Right (MajorBoundVersion v)
+              else return $ Right (RangeVersion (computePVPRange v))
+            StrategyPVP -> return $ Right (RangeVersion (computePVPRange v))
+            StrategyExact -> return $ Right (ExactVersion v)
+            StrategyWildcard -> return $ Right (RangeVersion (computeWildcardRange v))
+            StrategyNone -> return $ Right AnyVersion
         Left e -> 
           if errorCode e == NetworkError
             then do
@@ -47,11 +53,21 @@ resolveVersionConstraint maybeCtx mCabalVer pkgName Nothing = do
               return $ Right AnyVersion
             else return $ Left e
 
-resolveVersionConstraint _ _ _ (Just constraint) = do
+resolveVersionConstraint _ _ _ (Just constraint) _ = do
   -- Validate the constraint syntax using Cabal's parser
   case CabalParsec.simpleParsec (T.unpack constraint) :: Maybe CabalVR.VersionRange of
     Nothing -> return $ Left $ Error ("Invalid version constraint syntax: " <> constraint) InvalidDependency
     Just _  -> return $ Right (UnparsedVersion constraint)
+
+-- | Compute wildcard range (e.g. 1.2.*)
+computeWildcardRange :: Version -> VersionRange
+computeWildcardRange v@(Version parts) =
+  let lower = Just (v, Inclusive)
+      upper = case reverse parts of
+                (_:x:xs) -> Just (Version (reverse (x + 1 : xs)), Exclusive)
+                [x]      -> Just (Version [x + 1], Exclusive)
+                []       -> Nothing
+  in VersionRange lower upper
 
 -- | Check if cabal-version supports caret operator (^>=)
 -- Supported in Cabal >= 2.0

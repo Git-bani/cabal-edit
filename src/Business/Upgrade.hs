@@ -108,7 +108,7 @@ thd (_, _, c) = c
 resolveLatestDependency :: Maybe Version -> PackageName -> IO (Either Error Dependency)
 resolveLatestDependency cabalVer name = do
   -- Resolve using logic (PVP, Hackage)
-  res <- resolveVersionConstraint Nothing cabalVer name Nothing
+  res <- resolveVersionConstraint Nothing cabalVer name Nothing StrategyCaret
   case res of
     Left err -> return $ Left err
     Right constraint -> return $ Right $ Dependency 

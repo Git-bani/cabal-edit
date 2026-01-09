@@ -112,7 +112,7 @@ buildHackageLatestMap pkgData = do
   -- We don't have a project context for individual packages here, but we can pass Nothing
   -- or use the workspace context if we had it.
   results <- forM uniqueNames $ \name -> do
-    res <- resolveVersionConstraint Nothing Nothing name Nothing
+    res <- resolveVersionConstraint Nothing Nothing name Nothing StrategyCaret
     return (name, res)
   
   let (failures, successes) = partitionResults results

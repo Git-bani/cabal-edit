@@ -9,7 +9,7 @@ import Core.AST.Editor (addDependencyToAST, getCabalVersion, addMixinToAST)
 import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
-import Core.ProjectContext (ProjectContext)
+import Core.ProjectContext (ProjectContext(..))
 import Core.Solver (verifyChanges)
 import Utils.Logging (logInfo, logError, logWarning)
 import Utils.Terminal (selectPackages)
@@ -24,6 +24,12 @@ import Utils.Diff (diffLines, colorizeDiff)
 
 addDependency :: Maybe ProjectContext -> AddOptions -> FilePath -> IO (Either Error ())
 addDependency maybeCtx opts path = do
+  -- Check for freeze file
+  case maybeCtx of
+    Just ctx | pcHasFreezeFile ctx -> 
+      logWarning "cabal.project.freeze detected. This might override your dependency changes!"
+    _ -> return ()
+
   -- 0. Handle Interactive Search
   pkgNamesResult <- if aoInteractive opts
                     then handleInteractiveSearch (aoPackageNames opts)
@@ -93,7 +99,7 @@ processPackage maybeCtx opts (Right currentContent) pkgNameText = do
       let isSourceDep = isJust (aoGit opts) || isJust (aoPath opts)
       constraintResult <- if isSourceDep && isNothing (aoVersion opts)
                           then return $ Right AnyVersion
-                          else resolveVersionConstraint maybeCtx cabalVer pkgName (aoVersion opts)
+                          else resolveVersionConstraint maybeCtx cabalVer pkgName (aoVersion opts) (aoStrategy opts)
       
       case constraintResult of
         Left err -> return $ Left err

@@ -44,7 +44,7 @@ processHpackPackage opts (Right currentContent) pkgNameText = do
     Right pkgName -> do
       -- Resolve version / Constraint
       -- For Hpack we don't need full ProjectContext for local resolution yet (simplified)
-      constraintResult <- resolveVersionConstraint Nothing Nothing pkgName (aoVersion opts)
+      constraintResult <- resolveVersionConstraint Nothing Nothing pkgName (aoVersion opts) StrategyCaret
       
       case constraintResult of
         Left err -> return $ Left err

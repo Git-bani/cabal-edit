@@ -192,8 +192,23 @@ addParser = AddCmd <$>
       ( long "mixin"
       <> metavar "MIXIN"
       <> help "Add mixin (e.g. 'hiding (Prelude)' or '(Data.Text as Text)')" ))
+  <*> option strategyReader
+      ( long "strategy"
+      <> short 'S'
+      <> metavar "STRATEGY"
+      <> value StrategyCaret
+      <> help "Versioning strategy (caret|pvp|exact|wildcard|none)" )
   <*> some (T.pack <$> argument str (metavar "PACKAGE"))
   )
+
+strategyReader :: ReadM VersioningStrategy
+strategyReader = eitherReader $ \s -> case s of
+  "caret"    -> Right StrategyCaret
+  "pvp"      -> Right StrategyPVP
+  "exact"    -> Right StrategyExact
+  "wildcard" -> Right StrategyWildcard
+  "none"     -> Right StrategyNone
+  _          -> Left $ "Invalid strategy: " ++ s ++ ". Valid: caret, pvp, exact, wildcard, none"
 
 removeParser :: Parser Command
 removeParser = RemoveCmd <$>

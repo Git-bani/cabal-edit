@@ -49,6 +49,7 @@ module Core.Types
   , Error(..)
   , ErrorCode(..)
   , PackageMetadata(..)
+  , VersioningStrategy(..)
   ) where
 
 import Data.Text (Text)
@@ -215,6 +216,14 @@ data BoundType = Inclusive | Exclusive
 data Version = Version [Int] 
   deriving (Eq, Ord, Show, Generic, NFData)
 
+data VersioningStrategy
+  = StrategyCaret    -- ^>= 1.2.3 (Default)
+  | StrategyPVP      -- >= 1.2.3 && < 1.3
+  | StrategyExact    -- == 1.2.3.4
+  | StrategyWildcard -- 1.2.*
+  | StrategyNone     -- any
+  deriving (Show, Eq, Ord, Generic, NFData)
+
 -- Command types
 data CLI = CLI
   { cliVerbose :: Bool
@@ -277,6 +286,7 @@ data AddOptions = AddOptions
   , aoTag :: Maybe Text
   , aoPath :: Maybe Text
   , aoMixin :: Maybe Text
+  , aoStrategy :: VersioningStrategy
   , aoPackageNames :: [Text]
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (NFData)
