@@ -263,6 +263,7 @@ data AddOptions = AddOptions
   , aoFlag :: Maybe Text
   , aoDev :: Bool
   , aoDryRun :: Bool
+  , aoCheck :: Bool
   , aoInteractive :: Bool
   , aoGit :: Maybe Text
   , aoTag :: Maybe Text
@@ -275,6 +276,7 @@ data AddOptions = AddOptions
 data RemoveOptions = RemoveOptions
   { roSection :: SectionTarget
   , roDryRun :: Bool
+  , roCheck :: Bool
   , roInteractive :: Bool
   , roPackageNames :: [Text]
   } deriving stock (Show, Eq, Generic)
@@ -282,6 +284,7 @@ data RemoveOptions = RemoveOptions
 
 data UpgradeOptions = UpgradeOptions
   { uoDryRun :: Bool
+  , uoCheck :: Bool
   , uoInteractive :: Bool
   , uoPackageNames :: [Text]  -- Empty means all
   } deriving stock (Show, Eq, Generic)

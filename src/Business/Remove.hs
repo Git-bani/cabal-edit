@@ -7,6 +7,7 @@ import Core.AST.Parser (parseAST)
 import Core.AST.Serializer (serializeAST)
 import Core.AST.Editor (removeDependencyFromAST, findDependencyInAST, findDependenciesInAST)
 import Core.Safety
+import Core.Solver (verifyChanges)
 import Utils.Logging (logInfo)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -42,14 +43,22 @@ removeDependency opts path = do
       
       case finalContentResult of
         Left err -> return $ Left err
-        Right finalContent -> 
-          if roDryRun opts
-            then do
-              logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-              let diffs = diffLines (T.lines content) (T.lines finalContent)
-              colorizeDiff diffs
-              return $ Right ()
-            else safeWriteFile path finalContent
+        Right finalContent -> do
+          -- Solver Check
+          verificationResult <- if roCheck opts
+                                then verifyChanges path finalContent
+                                else return $ Right ()
+          
+          case verificationResult of
+            Left err -> return $ Left err
+            Right () -> 
+              if roDryRun opts
+                then do
+                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                  let diffs = diffLines (T.lines content) (T.lines finalContent)
+                  colorizeDiff diffs
+                  return $ Right ()
+                else safeWriteFile path finalContent
 
 processPackageRemove :: RemoveOptions -> Either Error Text -> Text -> IO (Either Error Text)
 processPackageRemove _ (Left err) _ = return $ Left err

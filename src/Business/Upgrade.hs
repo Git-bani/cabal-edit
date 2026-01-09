@@ -8,6 +8,7 @@ import Core.AST.Serializer (serializeAST, formatDependency)
 import Core.AST.Editor (updateDependencyInAST, findDependenciesInAST, getCabalVersion)
 import Core.Safety
 import Core.DependencyResolver (resolveVersionConstraint)
+import Core.Solver (verifyChanges)
 import Utils.Logging (logInfo)
 import Utils.Terminal (selectItems)
 import Data.Text (Text)
@@ -83,14 +84,22 @@ upgradeDependencies opts path = do
                     Right finalAST -> do
                       let newContent = serializeAST finalAST
                       if newContent /= content
-                        then 
-                          if uoDryRun opts
-                            then do
-                              logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                              let diffs = diffLines (T.lines content) (T.lines newContent)
-                              colorizeDiff diffs
-                              return $ Right ()
-                            else safeWriteFile path newContent
+                        then do
+                          -- Solver Check
+                          verificationResult <- if uoCheck opts
+                                                then verifyChanges path newContent
+                                                else return $ Right ()
+
+                          case verificationResult of
+                            Left err -> return $ Left err
+                            Right () ->
+                              if uoDryRun opts
+                                then do
+                                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                                  let diffs = diffLines (T.lines content) (T.lines newContent)
+                                  colorizeDiff diffs
+                                  return $ Right ()
+                                else safeWriteFile path newContent
                         else return $ Right ()
 
 thd :: (a, b, c) -> c

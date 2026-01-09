@@ -10,6 +10,7 @@ import Core.Safety
 import Core.DependencyResolver
 import Core.ProjectEditor
 import Core.ProjectContext (ProjectContext)
+import Core.Solver (verifyChanges)
 import Utils.Logging (logInfo, logError, logWarning)
 import Utils.Terminal (selectPackages)
 import External.Hackage (searchPackages)
@@ -44,14 +45,22 @@ addDependency maybeCtx opts path = do
           
           case finalContentResult of
             Left err -> return $ Left err
-            Right finalContent -> 
-              if aoDryRun opts
-                then do
-                  logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
-                  let diffs = diffLines (T.lines content) (T.lines finalContent)
-                  colorizeDiff diffs
-                  return $ Right ()
-                else safeWriteFile path finalContent
+            Right finalContent -> do
+              -- Solver Check
+              verificationResult <- if aoCheck opts
+                                    then verifyChanges path finalContent
+                                    else return $ Right ()
+              
+              case verificationResult of
+                Left err -> return $ Left err
+                Right () -> 
+                  if aoDryRun opts
+                    then do
+                      logInfo $ "Dry run: Proposed changes for " <> T.pack path <> ":"
+                      let diffs = diffLines (T.lines content) (T.lines finalContent)
+                      colorizeDiff diffs
+                      return $ Right ()
+                    else safeWriteFile path finalContent
 
 handleInteractiveSearch :: [Text] -> IO (Either Error [Text])
 handleInteractiveSearch [] = do

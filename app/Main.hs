@@ -156,6 +156,9 @@ addParser = AddCmd <$>
       ( long "dry-run"
       <> help "Don't write changes" )
   <*> switch
+      ( long "verify"
+      <> help "Verify changes with Cabal solver" )
+  <*> switch
       ( long "interactive"
       <> short 'i'
       <> help "Search Hackage interactively" )
@@ -191,6 +194,9 @@ removeParser = RemoveCmd <$>
       ( long "dry-run"
       <> help "Don't write changes" )
   <*> switch
+      ( long "verify"
+      <> help "Verify changes with Cabal solver" )
+  <*> switch
       ( long "interactive"
       <> short 'i'
       <> help "Select dependencies to remove interactively" )
@@ -203,6 +209,9 @@ upgradeParser = UpgradeCmd <$>
   <$> switch
       ( long "dry-run"
       <> help "Don't write changes" )
+  <*> switch
+      ( long "verify"
+      <> help "Verify changes with Cabal solver" )
   <*> switch
       ( long "interactive"
       <> short 'i'
