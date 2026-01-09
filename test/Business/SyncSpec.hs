@@ -68,6 +68,7 @@ withTempWorkspace pkgs action = do
             { pcRoot = tmpDir
             , pcPackages = paths
             , pcPackageGlobs = []
+            , pcHasFreezeFile = False
             }
       return ctx
     )

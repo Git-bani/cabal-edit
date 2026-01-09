@@ -27,6 +27,7 @@ spec = describe "Sub-library Support" $ do
             , aoDryRun = False
             , aoCheck = False
           , aoInteractive = False
+            , aoStrategy = StrategyCaret
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing, aoMixin = Nothing
@@ -52,6 +53,7 @@ spec = describe "Sub-library Support" $ do
             , aoDryRun = False
             , aoCheck = False
           , aoInteractive = False
+            , aoStrategy = StrategyCaret
             , aoGit = Nothing
             , aoTag = Nothing
             , aoPath = Nothing, aoMixin = Nothing
